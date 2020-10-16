@@ -128,7 +128,7 @@ def confirm(msg: catbot.Message):
                 button = catbot.InlineKeyboardButton(config['messages']['confirm_button'], callback_data=f'confirm_{h}')
                 keyboard = catbot.InlineKeyboard([[button]])
                 bot.send_message(msg.chat.id, text=config['messages']['confirm_wait'].format(
-                    name=wikipedia_username, h=h), reply_markup=keyboard)
+                    name=wikipedia_username, h=h), parse_mode='HTML', reply_markup=keyboard)
             else:
                 bot.send_message(msg.chat.id, text=config['messages']['confirm_ineligible'])
                 return
