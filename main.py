@@ -139,3 +139,10 @@ def confirm(msg: catbot.Message):
         ac_list[user_record_index] = entry.to_dict()
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+
+
+if __name__ == '__main__':
+    bot.add_msg_task(start_cri, start)
+    bot.add_msg_task(policy_cri, policy)
+    bot.add_msg_task(confirm_cri, confirm)
+    bot.start()
