@@ -2,7 +2,7 @@
   "token": "123456789:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
   "proxy": {
     "enable": true,
-    "url": "http://127.0.0.1:9999"
+    "proxy_url": "http://127.0.0.1:9999"
   },
   "operator_id": 987654321,
   "record": "record.json",
