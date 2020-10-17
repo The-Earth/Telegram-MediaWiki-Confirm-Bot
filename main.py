@@ -47,7 +47,7 @@ def log(text):
 
 
 def start_cri(msg: catbot.Message) -> bool:
-    return command_detector('start', msg) and msg.chat.type == 'private'
+    return command_detector('/start', msg) and msg.chat.type == 'private'
 
 
 def start(msg: catbot.Message):
@@ -65,7 +65,7 @@ def start(msg: catbot.Message):
 
 
 def policy_cri(msg: catbot.Message) -> bool:
-    return command_detector('policy', msg)
+    return command_detector('/policy', msg)
 
 
 def policy(msg: catbot.Message):
@@ -73,7 +73,7 @@ def policy(msg: catbot.Message):
 
 
 def confirm_cri(msg: catbot.Message) -> bool:
-    return command_detector('confirm', msg) and msg.chat.type == 'private'
+    return command_detector('/confirm', msg) and msg.chat.type == 'private'
 
 
 def confirm(msg: catbot.Message):
