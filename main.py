@@ -10,7 +10,7 @@ from ac import Ac
 config = json.load(open('config.json', 'r', encoding='utf-8'))
 bot = catbot.Bot(config)
 t_lock = threading.Lock()
-site = mwclient.Site(config['main_site'])
+site = mwclient.Site(config['main_site'], reqs=bot.proxy_kw)
 
 
 def command_detector(cmd: str, msg: catbot.Message) -> bool:
@@ -121,17 +121,19 @@ def confirm(msg: catbot.Message):
 
         global_user_info = global_user_info_query['query']['globaluserinfo']['merged']
         for local_user in global_user_info:
-            if local_user['wiki'] in config['wiki_list'] and local_user['wiki']['editcount'] >= 50 and \
+            if local_user['wiki'] in config['wiki_list'] and local_user['editcount'] >= 50 and \
                     time.mktime(time.strptime(local_user['registration'], '%Y-%m-%dT%H:%M:%SZ')) > 7 * 86400:
                 entry.confirming = True
                 h = hash(time.time())
                 button = catbot.InlineKeyboardButton(config['messages']['confirm_button'], callback_data=f'confirm_{h}')
                 keyboard = catbot.InlineKeyboard([[button]])
                 bot.send_message(msg.chat.id, text=config['messages']['confirm_wait'].format(
-                    name=wikipedia_username, h=h), parse_mode='HTML', reply_markup=keyboard)
-            else:
-                bot.send_message(msg.chat.id, text=config['messages']['confirm_ineligible'])
-                return
+                                 name=wikipedia_username, h=h), parse_mode='HTML', disable_web_page_preview=True,
+                                 reply_markup=keyboard)
+                break
+        else:
+            bot.send_message(msg.chat.id, text=config['messages']['confirm_ineligible'])
+            return
 
         entry.wikimedia_username = wikipedia_username
         ac_list[user_record_index] = entry.to_dict()
