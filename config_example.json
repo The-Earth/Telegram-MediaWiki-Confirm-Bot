@@ -15,9 +15,10 @@
     "confirm_already": "您已成功验证站内账户 {wp_name}。如需解除与站内账户的关联，请使用 /deconfirm 。",
     "confirm_conflict": "您提供的维基百科用户名已验证为其他 Telegram 账户。",
     "confirm_prompt": "使用方法：输入 /confirm 加上您在维基百科上的用户名，不包含 <code>User:</code> 前缀。\n\n例如，若您的用户名是 <code>ABC</code>，则请输入 <code>/confirm ABC</code>",
+    "confirm_checking": "正在检查您的维基百科账户",
     "confirm_user_not_found": "未找到名为 {name} 的维基百科用户。",
     "confirm_button": "确认",
-    "confirm_wait": "请至<a href=\"https://zh.wikipedia.org/wiki/User:{name}\">此页</a>的任意位置添加以下内容：\n\n{h}\n\n完成后点击确认按钮。",
+    "confirm_wait": "请在 3 分钟内至<a href=\"https://zh.wikipedia.org/wiki/User:{name}\">此页</a>的任意位置添加以下内容：\n\n{h}\n\n完成后点击确认按钮。",
     "confirm_ineligible": "对不起，您尚未达到入群门槛。"
   }
 }

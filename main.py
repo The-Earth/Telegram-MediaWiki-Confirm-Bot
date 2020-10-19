@@ -104,6 +104,7 @@ def confirm(msg: catbot.Message):
             user_record_index = len(ac_list)
             entry = Ac(msg.from_.id)
 
+        bot.send_message(msg.chat.id, text=config['messages']['confirm_checking'])
         global_user_info_query = site.api(**{
             "action": "query",
             "format": "json",
