@@ -95,13 +95,13 @@ def confirm(msg: catbot.Message):
                                          wp_name=entry.wikimedia_username))
                     return
                 else:
-                    user_record_index = i
+                    entry_index = i
                     break
             elif entry.wikimedia_username == wikipedia_username and (entry.confirmed or entry.confirming):
                 bot.send_message(msg.chat.id, text=config['messages']['confirm_conflict'])
                 return
         else:
-            user_record_index = len(ac_list)
+            entry_index = len(ac_list)
             entry = Ac(msg.from_.id)
 
         bot.send_message(msg.chat.id, text=config['messages']['confirm_checking'])
@@ -137,7 +137,7 @@ def confirm(msg: catbot.Message):
             return
 
         entry.wikimedia_username = wikipedia_username
-        ac_list[user_record_index] = entry.to_dict()
+        ac_list[entry_index] = entry.to_dict()
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
