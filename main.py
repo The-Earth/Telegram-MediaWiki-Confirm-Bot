@@ -142,6 +142,76 @@ def confirm(msg: catbot.Message):
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
 
+def confirm_button_cri(query: catbot.CallbackQuery) -> bool:
+    return query.data.startswith('confirm') and query.msg.chat.type == 'private'
+
+
+def confirm_button(query: catbot.CallbackQuery):
+    confirm_token = query.data.split('_')[1]
+    bot.answer_callback_query(callback_query_id=query.id)
+    with t_lock:
+        ac_list, rec = record_empty_test('ac', list)
+        for i in range(len(ac_list)):
+            entry = Ac.from_dict(ac_list[i])
+            if entry.telegram_id != query.from_.id:
+                continue
+            if entry.confirmed:
+                bot.send_message(query.msg.chat.id, text=config['messages']['confirm_already'].format(
+                                                                                    wp_name=entry.wikimedia_username))
+                bot.edit_message(query.msg.chat.id, query.msg.id, text=query.msg.html_formatted_text, parse_mode='HTML',
+                                 disable_web_page_preview=True)
+                return
+            if not entry.confirming:
+                bot.send_message(query.msg.chat.id, text=config['messages']['confirm_session_lost'])
+                bot.edit_message(query.msg.chat.id, query.msg.id, text=query.msg.html_formatted_text, parse_mode='HTML',
+                                 disable_web_page_preview=True)
+                return
+            else:
+                entry_index = i
+                break
+        else:
+            bot.send_message(query.msg.chat.id, text=config['messages']['confirm_session_lost'])
+            bot.edit_message(query.msg.chat.id, query.msg.id, text=query.msg.html_formatted_text, parse_mode='HTML',
+                             disable_web_page_preview=True)
+            return
+
+        try:
+            revs = site.Pages[f'User:{entry.wikimedia_username}'].revisions()
+            while True:
+                rev = next(revs)
+                if time.time() - time.mktime(rev['timestamp']) <= 180 and confirm_token in rev['comment']:
+                    entry.confirmed = True
+                    entry.confirming = False
+                    bot.send_message(query.msg.from_.id, text=config['messages']['confirm_complete'])
+                    break
+                elif time.time() - time.mktime(rev['timestamp']) <= 180 and not confirm_token in rev['comment']:
+                    continue
+                elif time.time() - time.mktime(rev['timestamp']) > 180:
+                    bot.send_message(query.msg.from_.id, text=config['messages']['confirm_failed'])
+                    entry.confirmed = False
+                    entry.confirming = False
+                    break
+        except StopIteration:
+            bot.send_message(query.msg.from_.id, text=config['messages']['confirm_failed'])
+            entry.confirmed = False
+            entry.confirming = False
+
+        ac_list[entry_index] = entry.to_dict()
+        rec['ac'] = ac_list
+        json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+        bot.edit_message(query.msg.chat.id, query.msg.id, text=query.msg.html_formatted_text, parse_mode='HTML',
+                         disable_web_page_preview=True)
+
+    try:
+        if entry.confirmed:
+            if entry.restricted_until != 0 and entry.restricted_until <= time.time() + 30:
+                bot.lift_restrictions(config['group'], query.from_.id)
+            else:
+                bot.silence_chat_member(config['group'], query.from_.id, until=entry.restricted_until)
+    except catbot.InsufficientRightError:
+        bot.send_message(config['group'], text=config['messages']['insufficient_right'])
+
+
 if __name__ == '__main__':
     bot.add_msg_task(start_cri, start)
     bot.add_msg_task(policy_cri, policy)

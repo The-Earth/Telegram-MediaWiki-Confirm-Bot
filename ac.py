@@ -5,6 +5,7 @@ class Ac:
         self.telegram_id: int = telegram_id
         self.wikimedia_username: str = ''
         self.confirmed_time: int = 0
+        self.restricted_until: int = 0
 
     def to_dict(self):
         return self.__dict__
@@ -16,5 +17,6 @@ class Ac:
         obj.confirming = data['confirming']
         obj.wikimedia_username = data['wikimedia_username']
         obj.confirmed_time = data['confirmed_time']
+        obj.restricted_until = data['restricted_until']
 
         return obj

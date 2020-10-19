@@ -6,19 +6,24 @@
   },
   "operator_id": 987654321,
   "record": "record.json",
+  "group": -100123456789,
   "log_channel": 987654321,
   "main_site": "zh.wikipedia.org",
   "wiki_list": ["zhwiki"],
   "messages": {
     "start": "/confirm 验证站内账户\n/deconfirm 解除与站内账户的关联",
     "policy": "",
-    "confirm_already": "您已成功验证站内账户 {wp_name}。如需解除与站内账户的关联，请使用 /deconfirm 。",
+    "insufficient_right": "请授予我 Ban Users 权限以便正常运作，感谢🙏",
+    "confirm_already": "您已成功验证站内账户 {wp_name}。若无法发言，请联络群组管理员。",
     "confirm_conflict": "您提供的维基百科用户名已验证为其他 Telegram 账户。",
     "confirm_prompt": "使用方法：输入 /confirm 加上您在维基百科上的用户名，不包含 <code>User:</code> 前缀。\n\n例如，若您的用户名是 <code>ABC</code>，则请输入 <code>/confirm ABC</code>",
     "confirm_checking": "正在检查您的维基百科账户",
     "confirm_user_not_found": "未找到名为 {name} 的维基百科用户。",
     "confirm_button": "确认",
-    "confirm_wait": "请在 3 分钟内至<a href=\"https://zh.wikipedia.org/wiki/User:{name}\">此页</a>的任意位置添加以下内容：\n\n{h}\n\n完成后点击确认按钮。",
-    "confirm_ineligible": "对不起，您尚未达到入群门槛。"
+    "confirm_wait": "请在 3 分钟内至<a href=\"https://zh.wikipedia.org/wiki/User:{name}\">此页</a>添加任意文字，并在编辑摘要中填写以下内容后保存：\n\n{h}\n\n完成后点击确认按钮。",
+    "confirm_ineligible": "对不起，您尚未达到入群门槛。",
+    "confirm_session_lost": "对不起，为确保验证有效，请重新使用 /confirm 指令进行验证。",
+    "confirm_complete": "验证成功。",
+    "confirm_failed": "验证失败，请重新使用 /confirm 指令进行验证。"
   }
 }
