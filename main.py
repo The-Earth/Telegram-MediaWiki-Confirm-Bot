@@ -83,7 +83,7 @@ def confirm(msg: catbot.Message):
         bot.send_message(msg.chat.id, text=config['messages']['confirm_prompt'], parse_mode='HTML')
         return
 
-    wikipedia_username = '_'.join(user_input_token[1:])
+    wikimedia_username = '_'.join(user_input_token[1:])
     with t_lock:
         ac_list, rec = record_empty_test('ac', list)
 
@@ -98,12 +98,13 @@ def confirm(msg: catbot.Message):
                 else:
                     entry_index = i
                     break
-            elif entry.wikimedia_username == wikipedia_username and (entry.confirmed or entry.confirming):
+            elif entry.wikimedia_username == wikimedia_username and (entry.confirmed or entry.confirming):
                 bot.send_message(msg.chat.id, text=config['messages']['confirm_conflict'])
                 return
         else:
             entry_index = len(ac_list)
             entry = Ac(msg.from_.id)
+            ac_list.append(entry)
 
         bot.send_message(msg.chat.id, text=config['messages']['confirm_checking'])
         global_user_info_query = site.api(**{
@@ -118,7 +119,7 @@ def confirm(msg: catbot.Message):
 
         if 'missing' in global_user_info_query['query']['globaluserinfo'].keys():
             bot.send_message(msg.chat.id, text=config['messages']['confirm_user_not_found'].format(
-                name=wikipedia_username))
+                name=wikimedia_username))
             return
 
         global_user_info = global_user_info_query['query']['globaluserinfo']['merged']
@@ -129,9 +130,10 @@ def confirm(msg: catbot.Message):
                 h = hash(time.time())
                 button = catbot.InlineKeyboardButton(config['messages']['confirm_button'], callback_data=f'confirm_{h}')
                 keyboard = catbot.InlineKeyboard([[button]])
-                bot.send_message(msg.chat.id, text=config['messages']['confirm_wait'].format(
-                                 name=wikipedia_username, h=h), parse_mode='HTML', disable_web_page_preview=True,
-                                 reply_markup=keyboard)
+                bot.send_message(msg.chat.id, text=config['messages']['confirm_wait'].format(site=config['main_site'],
+                                                                                             name=wikimedia_username,
+                                                                                             h=h),
+                                 parse_mode='HTML', disable_web_page_preview=True, reply_markup=keyboard)
                 break
         else:
             bot.send_message(msg.chat.id, text=config['messages']['confirm_ineligible'])
@@ -159,7 +161,7 @@ def confirm_button(query: catbot.CallbackQuery):
                 continue
             if entry.confirmed:
                 bot.send_message(query.msg.chat.id, text=config['messages']['confirm_already'].format(
-                                                                                    wp_name=entry.wikimedia_username))
+                    wp_name=entry.wikimedia_username))
                 bot.edit_message(query.msg.chat.id, query.msg.id, text=query.msg.html_formatted_text, parse_mode='HTML',
                                  disable_web_page_preview=True)
                 return
@@ -196,7 +198,7 @@ def confirm_button(query: catbot.CallbackQuery):
                     entry.confirming = False
                     break
         except StopIteration:
-            bot.send_message(query.msg.from_.id, text=config['messages']['confirm_failed'])
+            bot.send_message(query.msg.chat.id, text=config['messages']['confirm_failed'])
             entry.confirmed = False
             entry.confirming = False
 
