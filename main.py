@@ -113,7 +113,7 @@ def confirm(msg: catbot.Message):
             "meta": "globaluserinfo",
             "utf8": 1,
             "formatversion": "2",
-            "guiuser": wikipedia_username,
+            "guiuser": wikimedia_username,
             "guiprop": "merged"
         })
 
@@ -214,6 +214,8 @@ def confirm_button(query: catbot.CallbackQuery):
                 bot.lift_restrictions(config['group'], query.from_.id)
             else:
                 bot.silence_chat_member(config['group'], query.from_.id, until=entry.restricted_until)
+    except catbot.RestrictAdminError:
+        pass
     except catbot.InsufficientRightError:
         bot.send_message(config['group'], text=config['messages']['insufficient_right'])
 
