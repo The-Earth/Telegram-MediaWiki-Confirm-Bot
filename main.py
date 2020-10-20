@@ -1,13 +1,14 @@
 import json
 import threading
 import time
+from calendar import timegm
 
 import catbot
 import mwclient
 
 from ac import Ac
 
-config = json.load(open('config.json', 'r', encoding='utf-8'))
+config = json.load(open('config_test.json', 'r', encoding='utf-8'))
 bot = catbot.Bot(config)
 t_lock = threading.Lock()
 site = mwclient.Site(config['main_site'], reqs=bot.proxy_kw)
@@ -136,7 +137,8 @@ def confirm(msg: catbot.Message):
             bot.send_message(msg.chat.id, text=config['messages']['confirm_ineligible'])
             return
 
-        entry.wikimedia_username = wikipedia_username
+        entry.init_confirm_time = time.time()
+        entry.wikimedia_username = wikimedia_username
         ac_list[entry_index] = entry.to_dict()
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
@@ -179,15 +181,17 @@ def confirm_button(query: catbot.CallbackQuery):
             revs = site.Pages[f'User:{entry.wikimedia_username}'].revisions()
             while True:
                 rev = next(revs)
-                if time.time() - time.mktime(rev['timestamp']) <= 180 and confirm_token in rev['comment']:
+                if timegm(rev['timestamp']) - entry.init_confirm_time <= 180:
+                    if rev['user'] != entry.wikimedia_username:
+                        continue
+                    if confirm_token not in rev['comment']:
+                        continue
                     entry.confirmed = True
                     entry.confirming = False
-                    bot.send_message(query.msg.from_.id, text=config['messages']['confirm_complete'])
+                    bot.send_message(query.msg.chat.id, text=config['messages']['confirm_complete'])
                     break
-                elif time.time() - time.mktime(rev['timestamp']) <= 180 and not confirm_token in rev['comment']:
-                    continue
-                elif time.time() - time.mktime(rev['timestamp']) > 180:
-                    bot.send_message(query.msg.from_.id, text=config['messages']['confirm_failed'])
+                else:
+                    bot.send_message(query.msg.chat.id, text=config['messages']['confirm_failed'])
                     entry.confirmed = False
                     entry.confirming = False
                     break
@@ -216,4 +220,5 @@ if __name__ == '__main__':
     bot.add_msg_task(start_cri, start)
     bot.add_msg_task(policy_cri, policy)
     bot.add_msg_task(confirm_cri, confirm)
+    bot.add_query_task(confirm_button_cri, confirm_button)
     bot.start()

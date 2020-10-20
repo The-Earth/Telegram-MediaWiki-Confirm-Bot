@@ -6,6 +6,7 @@ class Ac:
         self.wikimedia_username: str = ''
         self.confirmed_time: int = 0
         self.restricted_until: int = 0
+        self.init_confirm_time: int = 0
 
     def to_dict(self):
         return self.__dict__
@@ -18,5 +19,6 @@ class Ac:
         obj.wikimedia_username = data['wikimedia_username']
         obj.confirmed_time = data['confirmed_time']
         obj.restricted_until = data['restricted_until']
+        obj.init_confirm_time = data['init_confirm_time']
 
         return obj
