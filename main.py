@@ -52,16 +52,6 @@ def start_cri(msg: catbot.Message) -> bool:
 
 
 def start(msg: catbot.Message):
-    ac_list, rec = record_empty_test('ac', list)
-    for entry_dict in ac_list:
-        entry = Ac.from_dict(entry_dict)
-        if entry.telegram_id == msg.from_.id:
-            break
-    else:
-        new_entry = Ac(msg.from_.id)
-        ac_list.append(new_entry.to_dict())
-        rec['ac'] = ac_list
-        json.dump(rec, open(config['record'], 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
     bot.send_message(msg.chat.id, text=config['messages']['start'])
 
 
@@ -129,9 +119,9 @@ def confirm(msg: catbot.Message):
                 return
 
         if not exist:
-            entry_index = len(ac_list)
+            entry_index = -1
             entry = Ac(msg.from_.id)
-            ac_list.append(entry)
+            ac_list.append(entry.to_dict())
 
         entry.confirming = True
         entry.wikimedia_username = wikimedia_username
@@ -249,7 +239,7 @@ def new_member(msg: catbot.Message):
             user_index = -1
 
         entry.restricted_until = restricted_until
-        ac_list[user_index] = entry
+        ac_list[user_index] = entry.to_dict()
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
