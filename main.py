@@ -155,6 +155,8 @@ def confirm_button_cri(query: catbot.CallbackQuery) -> bool:
 def confirm_button(query: catbot.CallbackQuery):
     confirm_token = query.data.split('_')[1]
     bot.answer_callback_query(callback_query_id=query.id)
+    bot.edit_message(query.msg.chat.id, query.msg.id, text=query.msg.html_formatted_text, parse_mode='HTML',
+                     disable_web_page_preview=True)
     with t_lock:
         ac_list, rec = record_empty_test('ac', list)
         for i in range(len(ac_list)):
@@ -164,21 +166,12 @@ def confirm_button(query: catbot.CallbackQuery):
             if entry.confirmed:
                 bot.send_message(query.msg.chat.id, text=config['messages']['confirm_already'].format(
                     wp_name=entry.wikimedia_username))
-                bot.edit_message(query.msg.chat.id, query.msg.id, text=query.msg.html_formatted_text, parse_mode='HTML',
-                                 disable_web_page_preview=True)
                 return
-            if not entry.confirming:
-                bot.send_message(query.msg.chat.id, text=config['messages']['confirm_session_lost'])
-                bot.edit_message(query.msg.chat.id, query.msg.id, text=query.msg.html_formatted_text, parse_mode='HTML',
-                                 disable_web_page_preview=True)
-                return
-            else:
+            if entry.confirming:
                 entry_index = i
                 break
         else:
             bot.send_message(query.msg.chat.id, text=config['messages']['confirm_session_lost'])
-            bot.edit_message(query.msg.chat.id, query.msg.id, text=query.msg.html_formatted_text, parse_mode='HTML',
-                             disable_web_page_preview=True)
             return
 
         try:
@@ -192,30 +185,28 @@ def confirm_button(query: catbot.CallbackQuery):
                         continue
                     entry.confirmed = True
                     entry.confirming = False
-                    bot.send_message(query.msg.chat.id, text=config['messages']['confirm_complete'])
                     break
                 else:
-                    bot.send_message(query.msg.chat.id, text=config['messages']['confirm_failed'])
                     entry.confirmed = False
                     entry.confirming = False
                     break
         except StopIteration:
-            bot.send_message(query.msg.chat.id, text=config['messages']['confirm_failed'])
             entry.confirmed = False
             entry.confirming = False
 
         ac_list[entry_index] = entry.to_dict()
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
-        bot.edit_message(query.msg.chat.id, query.msg.id, text=query.msg.html_formatted_text, parse_mode='HTML',
-                         disable_web_page_preview=True)
 
     try:
         if entry.confirmed:
-            if entry.restricted_until != 0 and entry.restricted_until <= time.time() + 30:
+            bot.send_message(query.msg.chat.id, text=config['messages']['confirm_complete'])
+            if entry.restricted_until <= time.time() + 30:
                 bot.lift_restrictions(config['group'], query.from_.id)
             else:
                 bot.silence_chat_member(config['group'], query.from_.id, until=entry.restricted_until)
+        else:
+            bot.send_message(query.msg.chat.id, text=config['messages']['confirm_failed'])
     except catbot.RestrictAdminError:
         pass
     except catbot.InsufficientRightError:
