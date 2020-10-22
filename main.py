@@ -211,6 +211,56 @@ def confirm_button(query: catbot.CallbackQuery):
         pass
     except catbot.InsufficientRightError:
         bot.send_message(config['group'], text=config['messages']['insufficient_right'])
+    except catbot.UserNotFoundError:
+        pass
+
+
+def new_member_cri(msg: catbot.Message) -> bool:
+    return msg.chat.id == config['group'] and hasattr(msg, 'new_chat_members')
+
+
+def new_member(msg: catbot.Message):
+    user = msg.new_chat_members[0]
+    user_chat = bot.get_chat_member(config['group'], user.id)
+    if user_chat.status == 'restricted':
+        restricted_until = user_chat.until_date
+    elif user_chat.status == 'creator' or user_chat.status == 'administrator':
+        return
+    else:
+        restricted_until = 0
+
+    try:
+        bot.silence_chat_member(config['group'], user.id)
+        bot.send_message(config['group'], text=config['messages']['new_member_hint'], reply_to_message_id=msg.id)
+    except catbot.InsufficientRightError:
+        bot.send_message(config['group'], text=config['messages']['insufficient_right'])
+        return
+
+    with t_lock:
+        ac_list, rec = record_empty_test('ac', list)
+        for i in range(len(ac_list)):
+            entry = Ac.from_dict(ac_list[i])
+            if entry.telegram_id == user.id:
+                user_index = i
+                break
+        else:
+            entry = Ac(msg.from_.id)
+            ac_list.append(entry)
+            user_index = -1
+
+        entry.restricted_until = restricted_until
+        ac_list[user_index] = entry
+        rec['ac'] = ac_list
+        json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+
+    try:
+        if entry.confirmed:
+            if entry.restricted_until <= time.time() + 30:
+                bot.lift_restrictions(config['group'], user.id)
+            else:
+                bot.silence_chat_member(config['group'], user.id, until=entry.restricted_until)
+    except catbot.InsufficientRightError:
+        pass
 
 
 if __name__ == '__main__':
@@ -218,4 +268,5 @@ if __name__ == '__main__':
     bot.add_msg_task(policy_cri, policy)
     bot.add_msg_task(confirm_cri, confirm)
     bot.add_query_task(confirm_button_cri, confirm_button)
+    bot.add_msg_task(new_member_cri, new_member)
     bot.start()

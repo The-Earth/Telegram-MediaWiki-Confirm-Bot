@@ -24,6 +24,7 @@
     "confirm_ineligible": "对不起，您尚未达到入群门槛。",
     "confirm_session_lost": "对不起，为确保验证有效，请重新使用 /confirm 指令进行验证。",
     "confirm_complete": "验证成功。",
-    "confirm_failed": "验证失败，请重新使用 /confirm 指令进行验证。"
+    "confirm_failed": "验证失败，请重新使用 /confirm 指令进行验证。",
+    "new_member_hint": "您好，请私聊我验证您的维基百科账号以取得发言权限。"
   }
 }
