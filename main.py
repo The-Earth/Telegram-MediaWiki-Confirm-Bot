@@ -134,7 +134,6 @@ def confirm(msg: catbot.Message):
             ac_list.append(entry)
 
         entry.confirming = True
-        entry.init_confirm_time = time.time()
         entry.wikimedia_username = wikimedia_username
         ac_list[entry_index] = entry.to_dict()
         rec['ac'] = ac_list
@@ -186,7 +185,7 @@ def confirm_button(query: catbot.CallbackQuery):
             revs = site.Pages[f'User:{entry.wikimedia_username}'].revisions()
             while True:
                 rev = next(revs)
-                if timegm(rev['timestamp']) - entry.init_confirm_time <= 180:
+                if 0 <= timegm(rev['timestamp']) - query.msg.date <= 180:
                     if rev['user'] != entry.wikimedia_username:
                         continue
                     if confirm_token not in rev['comment']:
