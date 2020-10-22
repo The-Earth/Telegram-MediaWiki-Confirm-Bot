@@ -4,7 +4,7 @@ class Ac:
         self.confirming = False
         self.telegram_id: int = telegram_id
         self.wikimedia_username: str = ''
-        self.confirmed_time: int = 0
+        self.confirmed_time: float = 0
         self.restricted_until: int = 0
 
     def to_dict(self):
