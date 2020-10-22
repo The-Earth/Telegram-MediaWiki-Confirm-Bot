@@ -84,9 +84,35 @@ def confirm(msg: catbot.Message):
         return
 
     wikimedia_username = '_'.join(user_input_token[1:])
+    bot.send_message(msg.chat.id, text=config['messages']['confirm_checking'])
+    global_user_info_query = site.api(**{
+        "action": "query",
+        "format": "json",
+        "meta": "globaluserinfo",
+        "utf8": 1,
+        "formatversion": "2",
+        "guiuser": wikimedia_username,
+        "guiprop": "merged"
+    })
+
+    if 'missing' in global_user_info_query['query']['globaluserinfo'].keys():
+        bot.send_message(msg.chat.id, text=config['messages']['confirm_user_not_found'].format(
+            name=wikimedia_username))
+        return
+
+    global_user_info = global_user_info_query['query']['globaluserinfo']['merged']
+    for local_user in global_user_info:
+        if local_user['wiki'] in config['wiki_list'] and local_user['editcount'] >= 50 and \
+                time.time() - timegm(time.strptime(local_user['registration'], '%Y-%m-%dT%H:%M:%SZ')) > 7 * 86400:
+            break
+    else:
+        bot.send_message(msg.chat.id, text=config['messages']['confirm_ineligible'])
+        return
+
     with t_lock:
         ac_list, rec = record_empty_test('ac', list)
 
+        exist = False
         for i in range(len(ac_list)):
             entry = Ac.from_dict(ac_list[i])
             if entry.telegram_id == msg.from_.id:
@@ -97,53 +123,30 @@ def confirm(msg: catbot.Message):
                     return
                 else:
                     entry_index = i
-                    break
+                    exist = True
             elif entry.wikimedia_username == wikimedia_username and (entry.confirmed or entry.confirming):
                 bot.send_message(msg.chat.id, text=config['messages']['confirm_conflict'])
                 return
-        else:
+
+        if not exist:
             entry_index = len(ac_list)
             entry = Ac(msg.from_.id)
             ac_list.append(entry)
 
-        bot.send_message(msg.chat.id, text=config['messages']['confirm_checking'])
-        global_user_info_query = site.api(**{
-            "action": "query",
-            "format": "json",
-            "meta": "globaluserinfo",
-            "utf8": 1,
-            "formatversion": "2",
-            "guiuser": wikimedia_username,
-            "guiprop": "merged"
-        })
-
-        if 'missing' in global_user_info_query['query']['globaluserinfo'].keys():
-            bot.send_message(msg.chat.id, text=config['messages']['confirm_user_not_found'].format(
-                name=wikimedia_username))
-            return
-
-        global_user_info = global_user_info_query['query']['globaluserinfo']['merged']
-        for local_user in global_user_info:
-            if local_user['wiki'] in config['wiki_list'] and local_user['editcount'] >= 50 and \
-                    time.mktime(time.strptime(local_user['registration'], '%Y-%m-%dT%H:%M:%SZ')) > 7 * 86400:
-                entry.confirming = True
-                h = hash(time.time())
-                button = catbot.InlineKeyboardButton(config['messages']['confirm_button'], callback_data=f'confirm_{h}')
-                keyboard = catbot.InlineKeyboard([[button]])
-                bot.send_message(msg.chat.id, text=config['messages']['confirm_wait'].format(site=config['main_site'],
-                                                                                             name=wikimedia_username,
-                                                                                             h=h),
-                                 parse_mode='HTML', disable_web_page_preview=True, reply_markup=keyboard)
-                break
-        else:
-            bot.send_message(msg.chat.id, text=config['messages']['confirm_ineligible'])
-            return
-
+        entry.confirming = True
         entry.init_confirm_time = time.time()
         entry.wikimedia_username = wikimedia_username
         ac_list[entry_index] = entry.to_dict()
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+
+    h = hash(time.time())
+    button = catbot.InlineKeyboardButton(config['messages']['confirm_button'], callback_data=f'confirm_{h}')
+    keyboard = catbot.InlineKeyboard([[button]])
+    bot.send_message(msg.chat.id, text=config['messages']['confirm_wait'].format(site=config['main_site'],
+                                                                                 name=wikimedia_username,
+                                                                                 h=h),
+                     parse_mode='HTML', disable_web_page_preview=True, reply_markup=keyboard)
 
 
 def confirm_button_cri(query: catbot.CallbackQuery) -> bool:
