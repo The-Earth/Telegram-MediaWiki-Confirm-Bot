@@ -8,7 +8,7 @@ import mwclient
 
 from ac import Ac
 
-config = json.load(open('config_test.json', 'r', encoding='utf-8'))
+config = json.load(open('config.json', 'r', encoding='utf-8'))
 bot = catbot.Bot(config)
 t_lock = threading.Lock()
 site = mwclient.Site(config['main_site'], reqs=bot.proxy_kw)
@@ -209,6 +209,70 @@ def confirm_button(query: catbot.CallbackQuery):
         pass
 
 
+def deconfirm_cri(msg: catbot.Message) -> bool:
+    return command_detector('/deconfirm', msg) and msg.chat.type == 'private'
+
+
+def deconfirm(msg: catbot.Message):
+    button = catbot.InlineKeyboardButton(config['messages']['deconfirm_button'], callback_data='deconfirm')
+    keyboard = catbot.InlineKeyboard([[button]])
+    bot.send_message(msg.chat.id, text=config['messages']['deconfirm_prompt'], reply_markup=keyboard)
+
+
+def deconfirm_button_cri(query: catbot.CallbackQuery) -> bool:
+    return query.data == 'deconfirm' and query.msg.chat.type == 'private'
+
+
+def deconfirm_button(query: catbot.CallbackQuery):
+    bot.answer_callback_query(query.id)
+    try:
+        user_chat = bot.get_chat_member(config['group'], query.from_.id)
+    except catbot.UserNotFoundError:
+        return
+
+    if user_chat.status == 'restricted':
+        restricted_until = user_chat.until_date
+        if restricted_until == 0:
+            restricted_until = -1  # Restricted by bot, keep entry.restricted_until unchanged later
+    else:
+        restricted_until = 0
+
+    with t_lock:
+        ac_list, rec = record_empty_test('ac', list)
+        for i in range(len(ac_list)):
+            entry = Ac.from_dict(ac_list[i])
+            if entry.telegram_id == query.from_.id:
+                if entry.confirmed:
+                    entry.confirmed = False
+                    ac_list[i] = entry.to_dict()
+                    if restricted_until != -1:
+                        entry.restricted_until = restricted_until
+                    break
+                else:
+                    bot.send_message(query.msg.chat.id, text=config['messages']['deconfirm_not_confirmed'])
+                    return
+        else:
+            bot.send_message(query.msg.chat.id, text=config['messages']['deconfirm_not_confirmed'])
+            return
+
+        rec['ac'] = ac_list
+        json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+
+    log(config['messages']['deconfirm_log'].format(tg_id=entry.telegram_id, wp_id=entry.wikimedia_username,
+                                                   site=config['main_site']))
+    bot.send_message(query.msg.chat.id, text=config['messages']['deconfirm_succ'])
+
+    if not entry.whitelist_reason:
+        try:
+            bot.silence_chat_member(config['group'], query.from_.id)
+        except catbot.InsufficientRightError:
+            bot.send_message(config['group'], text=config['messages']['insufficient_right'])
+        except catbot.RestrictAdminError:
+            pass
+        except catbot.UserNotFoundError:
+            pass
+
+
 def new_member_cri(msg: catbot.Message) -> bool:
     return msg.chat.id == config['group'] and hasattr(msg, 'new_chat_members')
 
@@ -391,4 +455,6 @@ if __name__ == '__main__':
     bot.add_msg_task(new_member_cri, new_member)
     bot.add_msg_task(add_whitelist_cri, add_whitelist)
     bot.add_msg_task(remove_whitelist_cri, remove_whitelist)
+    bot.add_msg_task(deconfirm_cri, deconfirm)
+    bot.add_query_task(deconfirm_button_cri, deconfirm_button)
     bot.start()
