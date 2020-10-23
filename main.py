@@ -44,7 +44,7 @@ def record_empty_test(key: str, data_type):
 
 
 def log(text):
-    bot.send_message(config['log_channel'], text=text, parse_mode='HTML')
+    bot.send_message(config['log_channel'], text=text, parse_mode='HTML', disable_web_page_preview=True)
 
 
 def start_cri(msg: catbot.Message) -> bool:
