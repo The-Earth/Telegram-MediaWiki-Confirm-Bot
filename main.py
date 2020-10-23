@@ -175,6 +175,7 @@ def confirm_button(query: catbot.CallbackQuery):
                         continue
                     entry.confirmed = True
                     entry.confirming = False
+                    entry.confirmed_time = time.time()
                     break
                 else:
                     entry.confirmed = False
@@ -192,7 +193,7 @@ def confirm_button(query: catbot.CallbackQuery):
         if entry.confirmed:
             log(config['messages']['confirm_log'].format(tg_id=entry.telegram_id, wp_id=entry.wikimedia_username))
             bot.send_message(query.msg.chat.id, text=config['messages']['confirm_complete'])
-            if entry.restricted_until <= time.time() + 30:
+            if entry.restricted_until <= time.time() + 35:
                 bot.lift_restrictions(config['group'], query.from_.id)
             else:
                 bot.silence_chat_member(config['group'], query.from_.id, until=entry.restricted_until)
@@ -245,8 +246,8 @@ def new_member(msg: catbot.Message):
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
     try:
-        if entry.confirmed:
-            if entry.restricted_until <= time.time() + 30:
+        if entry.confirmed or entry.whitelist_reason:
+            if entry.restricted_until <= time.time() + 35:
                 bot.lift_restrictions(config['group'], user.id)
             else:
                 bot.silence_chat_member(config['group'], user.id, until=entry.restricted_until)
