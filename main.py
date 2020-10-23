@@ -229,14 +229,14 @@ def deconfirm_button(query: catbot.CallbackQuery):
     try:
         user_chat = bot.get_chat_member(config['group'], query.from_.id)
     except catbot.UserNotFoundError:
-        return
-
-    if user_chat.status == 'restricted':
-        restricted_until = user_chat.until_date
-        if restricted_until == 0:
-            restricted_until = -1  # Restricted by bot, keep entry.restricted_until unchanged later
-    else:
         restricted_until = 0
+    else:
+        if user_chat.status == 'restricted':
+            restricted_until = user_chat.until_date
+            if restricted_until == 0:
+                restricted_until = -1  # Restricted by bot, keep entry.restricted_until unchanged later
+        else:
+            restricted_until = 0
 
     with t_lock:
         ac_list, rec = record_empty_test('ac', list)
@@ -333,7 +333,7 @@ def add_whitelist_cri(msg: catbot.Message) -> bool:
 
 def add_whitelist(msg: catbot.Message):
     adder = bot.get_chat_member(config['group'], msg.from_.id)
-    if not adder.status == 'creator' or adder.status == 'administrator':
+    if not (adder.status == 'creator' or adder.status == 'administrator'):
         return
 
     user_input_token = msg.text.split()
