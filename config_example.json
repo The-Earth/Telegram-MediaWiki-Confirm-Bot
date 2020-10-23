@@ -11,11 +11,11 @@
   "main_site": "zh.wikipedia.org",
   "wiki_list": ["zhwiki"],
   "messages": {
-    "start": "/confirm 验证站内账户\n/deconfirm 解除与站内账户的关联",
-    "policy": "",
+    "start": "/confirm 验证维基百科账户\n/deconfirm 解除与维基百科账户的关联\n/policy 查看机器人说明",
+    "policy": "验证维基百科账户时，您需要提供维基百科账户，并按照机器人的指示在维基百科上作出编辑，以确认您的身份。验证账户后，您就可以在群组中发言。您可以随时解除与站内账号的关联，若如此做，则机器人也会禁止您在群里发言。\n\n机器人在成功验证或解除关联后，会通过一个日志频道记录这些操作。在群组中，可以通过指令查看其他用户对应的维基百科用户名（尚未实现）。\n\n机器人会记录的信息为：您的 Telegram 账户 1） 是否完成验证，2）是否正在验证中，3）ID，4）对应的维基百科账号，5）完成验证的时间，6）上一次被群管禁言的期限",
     "insufficient_right": "请授予我 Ban Users 权限以便正常运作，感谢🙏",
     "restore_silence": "已按<a href=\"tg://user?id={tg_id}\">此用户</a>先前的禁言记录实施禁言，请复查。",
-    "confirm_already": "您已成功验证站内账户 {wp_name}。若无法发言，请联络群组管理员。",
+    "confirm_already": "您已成功验证站内账户 {wp_name}。若无法发言，请联络群组管理员。若要更改关联的维基百科账户，请先使用 /deconfirm 解除关联，然后重新验证。",
     "confirm_conflict": "您提供的维基百科用户名已验证为其他 Telegram 账户。",
     "confirm_prompt": "使用方法：输入 /confirm 加上您在维基百科上的用户名，不包含 <code>User:</code> 前缀。\n\n例如，若您的用户名是 <code>ABC</code>，则请输入 <code>/confirm ABC</code>",
     "confirm_checking": "正在检查您的维基百科账户",
@@ -33,13 +33,12 @@
     "deconfirm_not_confirmed": "您目前没有验证维基百科用户身份。",
     "deconfirm_log": "#解 #{tg_id}\n<a href=\"tg://user?id={tg_id}\">{tg_id}</a> 已解除与 <a href=\"https://zh.wikipedia.org/wiki/Special:Contributions/{wp_id}\">{wp_id}</a> 的关联",
     "new_member_hint": "您好，请私聊我验证您的维基百科账号以取得发言权限。",
-    "confirm_log": "#新 <a href=\"tg://user?id={tg_id}\">{tg_id}</a> 验证为 <a href=\"https://zh.wikipedia.org/wiki/Special:Contributions/{wp_id}\">{wp_id}</a>",
     "add_whitelist_prompt": "使用方法：/add_whitelist 用户ID 备注",
     "add_whitelist_succ": "{tg_id} 已加入白名单。",
-    "add_whitelist_log": "#白 {adder} 已将 <a href=\"tg://user?id={tg_id}\">{tg_id}</a> 加入白名单，备注：{reason}",
+    "add_whitelist_log": "#白 #{tg_id}\n{adder} 已将 <a href=\"tg://user?id={tg_id}\">{tg_id}</a> 加入白名单，备注：{reason}",
     "remove_whitelist_prompt": "使用方法：/remove_whitelist 用户ID",
     "remove_whitelist_not_found": "未在白名单中找到此人",
-    "remove_whitelist_log": "#白 {remover} 已将 <a href=\"tg://user?id={tg_id}\">{tg_id}</a> 移出白名单",
+    "remove_whitelist_log": "#白 #{tg_id}\n{remover} 已将 <a href=\"tg://user?id={tg_id}\">{tg_id}</a> 移出白名单",
     "remove_whitelist_succ": "{tg_id} 已移出白名单。"
   }
 }

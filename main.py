@@ -191,7 +191,8 @@ def confirm_button(query: catbot.CallbackQuery):
 
     try:
         if entry.confirmed:
-            log(config['messages']['confirm_log'].format(tg_id=entry.telegram_id, wp_id=entry.wikimedia_username))
+            log(config['messages']['confirm_log'].format(tg_id=entry.telegram_id, wp_id=entry.wikimedia_username,
+                                                         site=config['main_site']))
             bot.send_message(query.msg.chat.id, text=config['messages']['confirm_complete'])
             if entry.restricted_until <= time.time() + 35:
                 bot.lift_restrictions(config['group'], query.from_.id)
