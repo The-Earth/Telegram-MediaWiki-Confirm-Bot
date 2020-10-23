@@ -14,6 +14,7 @@
     "start": "/confirm 验证站内账户\n/deconfirm 解除与站内账户的关联",
     "policy": "",
     "insufficient_right": "请授予我 Ban Users 权限以便正常运作，感谢🙏",
+    "restore_silence": "已按<a href=\"tg://user?id={tg_id}\">此用户</a>先前的禁言记录实施禁言，请复查。",
     "confirm_already": "您已成功验证站内账户 {wp_name}。若无法发言，请联络群组管理员。",
     "confirm_conflict": "您提供的维基百科用户名已验证为其他 Telegram 账户。",
     "confirm_prompt": "使用方法：输入 /confirm 加上您在维基百科上的用户名，不包含 <code>User:</code> 前缀。\n\n例如，若您的用户名是 <code>ABC</code>，则请输入 <code>/confirm ABC</code>",
