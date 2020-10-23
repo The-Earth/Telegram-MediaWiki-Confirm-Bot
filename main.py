@@ -255,10 +255,136 @@ def new_member(msg: catbot.Message):
         pass
 
 
+def add_whitelist_cri(msg: catbot.Message) -> bool:
+    return command_detector('/add_whitelist', msg)
+
+
+def add_whitelist(msg: catbot.Message):
+    adder = bot.get_chat_member(config['group'], msg.from_.id)
+    if not adder.status == 'creator' or adder.status == 'administrator':
+        return
+
+    user_input_token = msg.text.split()
+    if msg.reply:
+        whitelist_id = msg.reply_to_message.from_.id
+        if len(user_input_token) > 1:
+            reason = ' '.join(user_input_token[1:])
+        else:
+            reason = 'whitelisted'
+    else:
+        if len(user_input_token) < 2:
+            bot.send_message(msg.chat.id, text=config['messages']['add_whitelist_prompt'], reply_to_message_id=msg.id)
+            return
+        whitelist_id = int(user_input_token[1])
+        if len(user_input_token) > 2:
+            reason = ' '.join(user_input_token[2:])
+        else:
+            reason = 'whitelisted'
+
+    with t_lock:
+        ac_list, rec = record_empty_test('ac', list)
+        for i in range(len(ac_list)):
+            entry = Ac.from_dict(ac_list[i])
+            if entry.telegram_id == whitelist_id:
+                entry.whitelist_reason = reason
+                ac_list[i] = entry.to_dict()
+                break
+        else:
+            entry = Ac(whitelist_id)
+            entry.whitelist_reason = reason
+            ac_list.append(entry.to_dict())
+
+        rec['ac'] = ac_list
+        json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+
+    log(config['messages']['add_whitelist_log'].format(adder=adder.name, tg_id=whitelist_id, reason=reason))
+    bot.send_message(msg.chat.id, text=config['messages']['add_whitelist_succ'].format(tg_id=whitelist_id),
+                     reply_to_message_id=msg.id)
+
+    try:
+        if entry.restricted_until <= time.time() + 35:
+            bot.lift_restrictions(config['group'], whitelist_id)
+        else:
+            bot.silence_chat_member(config['group'], whitelist_id, until=entry.restricted_until)
+            bot.send_message(config['group'],
+                             text=config['messages']['restore_silence'].format(tg_id=entry.telegram_id))
+    except catbot.RestrictAdminError:
+        pass
+    except catbot.InsufficientRightError:
+        bot.send_message(msg.chat.id, text=config['messages']['insufficient_right'])
+    except catbot.UserNotFoundError:
+        pass
+
+
+def remove_whitelist_cri(msg: catbot.Message) -> bool:
+    return command_detector('/remove_whitelist', msg)
+
+
+def remove_whitelist(msg: catbot.Message):
+    try:
+        remover = bot.get_chat_member(config['group'], msg.from_.id)
+    except catbot.UserNotFoundError:
+        return
+    if not remover.status == 'creator' or remover.status == 'administrator':
+        return
+
+    user_input_token = msg.text.split()
+    if msg.reply:
+        whitelist_id = msg.reply_to_message.from_.id
+    else:
+        if len(user_input_token) < 2:
+            bot.send_message(msg.chat.id, text=config['messages']['add_whitelist_prompt'], reply_to_message_id=msg.id)
+            return
+        whitelist_id = int(user_input_token[1])
+
+    try:
+        whitelist_user = bot.get_chat_member(config['group'], whitelist_id)
+    except catbot.UserNotFoundError:
+        restricted_until = 0
+    else:
+        if whitelist_user.status == 'restricted':
+            restricted_until = whitelist_user.until_date
+        else:
+            restricted_until = 0
+
+    with t_lock:
+        ac_list, rec = record_empty_test('ac', list)
+        for i in range(len(ac_list)):
+            entry = Ac.from_dict(ac_list[i])
+            if entry.telegram_id == whitelist_id and entry.whitelist_reason:
+                entry.whitelist_reason = ''
+                entry.restricted_until = restricted_until
+                ac_list[i] = entry.to_dict()
+                break
+        else:
+            bot.send_message(msg.chat.id, text=config['messages']['remove_whitelist_not_found'],
+                             reply_to_message_id=msg.id)
+            return
+
+        rec['ac'] = ac_list
+        json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+
+    log(config['messages']['remove_whitelist_log'].format(remover=remover.name, tg_id=whitelist_id))
+    bot.send_message(msg.chat.id, text=config['messages']['remove_whitelist_succ'].format(tg_id=whitelist_id),
+                     reply_to_message_id=msg.id)
+
+    if not entry.confirmed:
+        try:
+            bot.silence_chat_member(config['group'], whitelist_id)
+        except catbot.InsufficientRightError:
+            bot.send_message(msg.chat.id, text=config['messages']['insufficient_right'])
+        except catbot.RestrictAdminError:
+            pass
+        except catbot.UserNotFoundError:
+            pass
+
+
 if __name__ == '__main__':
     bot.add_msg_task(start_cri, start)
     bot.add_msg_task(policy_cri, policy)
     bot.add_msg_task(confirm_cri, confirm)
     bot.add_query_task(confirm_button_cri, confirm_button)
     bot.add_msg_task(new_member_cri, new_member)
+    bot.add_msg_task(add_whitelist_cri, add_whitelist)
+    bot.add_msg_task(remove_whitelist_cri, remove_whitelist)
     bot.start()
