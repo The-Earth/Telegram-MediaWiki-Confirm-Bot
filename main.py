@@ -283,6 +283,8 @@ def new_member(msg: catbot.Message):
     user_chat = bot.get_chat_member(config['group'], user.id)
     if user_chat.status == 'restricted':
         restricted_until = user_chat.until_date
+        if restricted_until == 0:
+            restricted_until = -1  # Restricted by bot, keep entry.restricted_until unchanged later
     elif user_chat.status == 'creator' or user_chat.status == 'administrator':
         return
     else:
@@ -307,7 +309,8 @@ def new_member(msg: catbot.Message):
             ac_list.append(entry)
             user_index = -1
 
-        entry.restricted_until = restricted_until
+        if restricted_until != -1:
+            entry.restricted_until = restricted_until
         ac_list[user_index] = entry.to_dict()
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
@@ -413,6 +416,8 @@ def remove_whitelist(msg: catbot.Message):
     else:
         if whitelist_user.status == 'restricted':
             restricted_until = whitelist_user.until_date
+            if restricted_until == 0:
+                restricted_until = -1  # Restricted by bot, keep entry.restricted_until unchanged later
         else:
             restricted_until = 0
 
@@ -422,7 +427,8 @@ def remove_whitelist(msg: catbot.Message):
             entry = Ac.from_dict(ac_list[i])
             if entry.telegram_id == whitelist_id and entry.whitelist_reason:
                 entry.whitelist_reason = ''
-                entry.restricted_until = restricted_until
+                if restricted_until != -1:
+                    entry.restricted_until = restricted_until
                 ac_list[i] = entry.to_dict()
                 break
         else:
