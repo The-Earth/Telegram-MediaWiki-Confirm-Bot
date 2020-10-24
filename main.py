@@ -197,7 +197,8 @@ def confirm_button(query: catbot.CallbackQuery):
             else:
                 bot.silence_chat_member(config['group'], query.from_.id, until=entry.restricted_until)
                 bot.send_message(config['group'],
-                                 text=config['messages']['restore_silence'].format(tg_id=entry.telegram_id))
+                                 text=config['messages']['restore_silence'].format(tg_id=entry.telegram_id),
+                                 parse_mode='HTML')
         else:
             bot.send_message(query.msg.chat.id, text=config['messages']['confirm_failed'])
     except catbot.RestrictAdminError:
@@ -319,7 +320,8 @@ def new_member(msg: catbot.Message):
             else:
                 bot.silence_chat_member(config['group'], user.id, until=entry.restricted_until)
                 bot.send_message(config['group'],
-                                 text=config['messages']['restore_silence'].format(tg_id=entry.telegram_id))
+                                 text=config['messages']['restore_silence'].format(tg_id=entry.telegram_id),
+                                 parse_mode='HTML')
         else:
             bot.send_message(config['group'], text=config['messages']['new_member_hint'], reply_to_message_id=msg.id)
     except catbot.InsufficientRightError:
@@ -378,7 +380,8 @@ def add_whitelist(msg: catbot.Message):
         else:
             bot.silence_chat_member(config['group'], whitelist_id, until=entry.restricted_until)
             bot.send_message(config['group'],
-                             text=config['messages']['restore_silence'].format(tg_id=entry.telegram_id))
+                             text=config['messages']['restore_silence'].format(tg_id=entry.telegram_id),
+                             parse_mode='HTML')
     except catbot.RestrictAdminError:
         pass
     except catbot.InsufficientRightError:
@@ -463,4 +466,11 @@ if __name__ == '__main__':
     bot.add_msg_task(remove_whitelist_cri, remove_whitelist)
     bot.add_msg_task(deconfirm_cri, deconfirm)
     bot.add_query_task(deconfirm_button_cri, deconfirm_button)
-    bot.start()
+
+    while True:
+        try:
+            bot.start()
+        except KeyboardInterrupt:
+            break
+        except:
+            pass
