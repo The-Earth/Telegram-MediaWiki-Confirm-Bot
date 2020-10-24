@@ -290,7 +290,6 @@ def new_member(msg: catbot.Message):
 
     try:
         bot.silence_chat_member(config['group'], user.id)
-        bot.send_message(config['group'], text=config['messages']['new_member_hint'], reply_to_message_id=msg.id)
     except catbot.InsufficientRightError:
         bot.send_message(config['group'], text=config['messages']['insufficient_right'])
         return
@@ -321,6 +320,8 @@ def new_member(msg: catbot.Message):
                 bot.silence_chat_member(config['group'], user.id, until=entry.restricted_until)
                 bot.send_message(config['group'],
                                  text=config['messages']['restore_silence'].format(tg_id=entry.telegram_id))
+        else:
+            bot.send_message(config['group'], text=config['messages']['new_member_hint'], reply_to_message_id=msg.id)
     except catbot.InsufficientRightError:
         pass
 
