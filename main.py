@@ -92,7 +92,7 @@ def confirm(msg: catbot.Message):
 
     global_user_info = global_user_info_query['query']['globaluserinfo']['merged']
     for local_user in global_user_info:
-        if local_user['wiki'] in config['wiki_list'] and local_user['editcount'] >= 50 and \
+        if local_user['editcount'] >= 50 and \
                 time.time() - timegm(time.strptime(local_user['registration'], '%Y-%m-%dT%H:%M:%SZ')) > 7 * 86400:
             break
     else:
