@@ -280,6 +280,8 @@ def new_member_cri(msg: catbot.Message) -> bool:
 def new_member(msg: catbot.Message):
     user = msg.new_chat_members[0]
     user_chat = bot.get_chat_member(config['group'], user.id)
+    if user_chat.is_bot:
+        return
     if user_chat.status == 'restricted':
         restricted_until = user_chat.until_date
         if restricted_until == 0:
