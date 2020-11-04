@@ -102,6 +102,7 @@ def confirm(msg: catbot.Message):
     with t_lock:
         ac_list, rec = record_empty_test('ac', list)
 
+        entry_index = -1
         for i in range(len(ac_list)):
             entry = Ac.from_dict(ac_list[i])
             if entry.telegram_id == msg.from_.id:
@@ -111,18 +112,18 @@ def confirm(msg: catbot.Message):
                                          wp_name=entry.wikimedia_username))
                     return
                 else:
-                    entry.confirming = True
-                    entry.wikimedia_username = wikimedia_username
-                    ac_list[i] = entry.to_dict()
-                break
+                    entry_index = i
+
             elif entry.wikimedia_username == wikimedia_username and (entry.confirmed or entry.confirming):
                 bot.send_message(msg.chat.id, text=config['messages']['confirm_conflict'])
                 return
         else:
-            entry = Ac(msg.from_.id)
+            if entry_index == -1:
+                entry = Ac(msg.from_.id)
+                ac_list.append(entry.to_dict())
             entry.confirming = True
             entry.wikimedia_username = wikimedia_username
-            ac_list.append(entry.to_dict())
+            ac_list[i] = entry.to_dict()
 
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
