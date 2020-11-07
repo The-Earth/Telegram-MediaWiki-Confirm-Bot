@@ -459,6 +459,45 @@ def remove_whitelist(msg: catbot.Message):
             pass
 
 
+def whois_cri(msg: catbot.Message) -> bool:
+    return command_detector('/whois', msg) and msg.chat.id == config['group']
+
+
+def whois(msg: catbot.Message):
+    user_input_token = msg.text.split()
+    if msg.reply:
+        whois_id = msg.reply_to_message.from_.id
+    else:
+        if len(user_input_token) == 1:
+            bot.send_message(config['group'], text=config['messages']['whois_prompt'], reply_to_message_id=msg.id)
+            return
+        else:
+            whois_id = user_input_token[1]
+
+    with t_lock:
+        ac_list, rec = record_empty_test('ac', list)
+        for i in range(len(ac_list)):
+            entry = Ac.from_dict(ac_list[i])
+            if str(entry.telegram_id) == whois_id:
+                break
+        else:
+            bot.send_message(config['group'], text=config['messages']['whois_not_found'], reply_to_message_id=msg.id)
+            return
+
+    whois_member = bot.get_chat_member(config['group'], whois_id)
+    resp_text = f'{whois_member.name} ({whois_member.id})\n'
+    if entry.confirmed:
+        resp_text += f"<a href=\"https://{config['main_site']}/wiki/Special:Contributions/{entry.wikimedia_username}" \
+                     f"\">{entry.wikimedia_username}</a>\n"
+    else:
+        resp_text += config['messages']['whois_no_wikimedia'] + '\n'
+    if entry.whitelist_reason:
+        resp_text += 'Whitelisted: ' + entry.whitelist_reason
+
+    bot.send_message(config['group'], text=resp_text, reply_to_message_id=msg.id, parse_mode='HTML',
+                     disable_web_page_preview=True)
+
+
 if __name__ == '__main__':
     bot.add_msg_task(start_cri, start)
     bot.add_msg_task(policy_cri, policy)
@@ -469,6 +508,7 @@ if __name__ == '__main__':
     bot.add_msg_task(remove_whitelist_cri, remove_whitelist)
     bot.add_msg_task(deconfirm_cri, deconfirm)
     bot.add_query_task(deconfirm_button_cri, deconfirm_button)
+    bot.add_msg_task(whois_cri, whois)
 
     while True:
         try:
