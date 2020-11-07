@@ -472,13 +472,18 @@ def whois(msg: catbot.Message):
             bot.send_message(config['group'], text=config['messages']['whois_prompt'], reply_to_message_id=msg.id)
             return
         else:
-            whois_id = user_input_token[1]
+            try:
+                whois_id = int(user_input_token[1])
+            except ValueError:
+                bot.send_message(config['group'], text=config['messages']['whois_not_found'],
+                                 reply_to_message_id=msg.id)
+                return
 
     with t_lock:
         ac_list, rec = record_empty_test('ac', list)
         for i in range(len(ac_list)):
             entry = Ac.from_dict(ac_list[i])
-            if str(entry.telegram_id) == whois_id:
+            if entry.telegram_id == whois_id:
                 break
         else:
             bot.send_message(config['group'], text=config['messages']['whois_not_found'], reply_to_message_id=msg.id)
