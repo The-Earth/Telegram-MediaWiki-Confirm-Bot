@@ -168,7 +168,7 @@ def confirm_button(query: catbot.CallbackQuery):
             while True:
                 rev = next(revs)
                 if 0 <= timegm(rev['timestamp']) - query.msg.date <= 180:
-                    if rev['user'] != entry.wikimedia_username:
+                    if rev['user'].replace(' ', '_') != entry.wikimedia_username:
                         continue
                     if confirm_token not in rev['comment']:
                         continue
