@@ -7,6 +7,7 @@ class Ac:
         self.confirmed_time: float = 0
         self.restricted_until: int = 0
         self.whitelist_reason: str = ''
+        self.refused: bool = False
 
     def to_dict(self):
         return self.__dict__
@@ -20,5 +21,6 @@ class Ac:
         obj.confirmed_time = data['confirmed_time']
         obj.restricted_until = data['restricted_until']
         obj.whitelist_reason = data['whitelist_reason']
+        obj.refused = data['refused']
 
         return obj
