@@ -121,9 +121,10 @@ def confirm(msg: catbot.Message):
             if entry_index == -1:
                 entry = Ac(msg.from_.id)
                 ac_list.append(entry.to_dict())
+            entry = Ac.from_dict(ac_list[entry_index])
             entry.confirming = True
             entry.wikimedia_username = wikimedia_username
-            ac_list[i] = entry.to_dict()
+            ac_list[entry_index] = entry.to_dict()
 
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
@@ -489,8 +490,12 @@ def whois(msg: catbot.Message):
             bot.send_message(config['group'], text=config['messages']['whois_not_found'], reply_to_message_id=msg.id)
             return
 
-    whois_member = bot.get_chat_member(config['group'], whois_id)
-    resp_text = f'{whois_member.name} ({whois_member.id})\n'
+    try:
+        whois_member = bot.get_chat_member(config['group'], whois_id)
+        name = whois_member.name
+    except catbot.UserNotFoundError:
+        name = ''
+    resp_text = f'{name} ({whois_id})\n'
     if entry.confirmed:
         resp_text += f"<a href=\"https://{config['main_site']}/wiki/Special:Contributions/{entry.wikimedia_username}" \
                      f"\">{entry.wikimedia_username}</a>\n"
