@@ -497,12 +497,13 @@ def whois(msg: catbot.Message):
         name = ''
     resp_text = f'{name} ({whois_id})\n'
     if entry.confirmed:
-        resp_text += f"<a href=\"https://{config['main_site']}/wiki/Special:Contributions/{entry.wikimedia_username}" \
-                     f"\">{entry.wikimedia_username}</a>\n"
+        resp_text += config['messages']['whois_has_wikimedia'].format(
+            wp_id=entry.wikimedia_username, ctime=time.strftime('%Y-%m-%d %H:%M', time.gmtime(entry.confirmed_time))
+        )
     else:
-        resp_text += config['messages']['whois_no_wikimedia'] + '\n'
+        resp_text += config['messages']['whois_no_wikimedia']
     if entry.whitelist_reason:
-        resp_text += 'Whitelisted: ' + entry.whitelist_reason
+        resp_text += config['messages']['whois_whitelisted'].format(reason=entry.whitelist_reason)
 
     bot.send_message(config['group'], text=resp_text, reply_to_message_id=msg.id, parse_mode='HTML',
                      disable_web_page_preview=True)
