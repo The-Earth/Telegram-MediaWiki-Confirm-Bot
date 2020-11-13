@@ -476,7 +476,7 @@ def whois(msg: catbot.Message):
             try:
                 whois_id = int(user_input_token[1])
             except ValueError:
-                bot.send_message(config['group'], text=config['messages']['whois_not_found'],
+                bot.send_message(config['group'], text=config['messages']['whois_inverse'],
                                  reply_to_message_id=msg.id)
                 return
 
