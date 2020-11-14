@@ -47,7 +47,7 @@ def log(text):
     bot.send_message(config['log_channel'], text=text, parse_mode='HTML', disable_web_page_preview=True)
 
 
-def silence_trial(entry: Ac, right_alert_chat=0):
+def silence_trial(entry: Ac, alert_chat=0):
     member = bot.get_chat_member(config['group'], entry.telegram_id)
     if member.status == 'kicked':
         return
@@ -55,15 +55,15 @@ def silence_trial(entry: Ac, right_alert_chat=0):
         try:
             bot.silence_chat_member(config['group'], entry.telegram_id)
         except catbot.InsufficientRightError:
-            if right_alert_chat:
-                bot.send_message(right_alert_chat, text=config['messages']['insufficient_right'])
+            if alert_chat:
+                bot.send_message(alert_chat, text=config['messages']['insufficient_right'])
         except catbot.RestrictAdminError:
             pass
         except catbot.UserNotFoundError:
             pass
 
 
-def lift_restriction_trial(entry: Ac, right_alert_chat=0):
+def lift_restriction_trial(entry: Ac, alert_chat=0):
     member = bot.get_chat_member(config['group'], entry.telegram_id)
     if member.status == 'kicked':
         return
@@ -72,17 +72,16 @@ def lift_restriction_trial(entry: Ac, right_alert_chat=0):
             bot.lift_restrictions(config['group'], entry.telegram_id)
         else:
             bot.silence_chat_member(config['group'], entry.telegram_id, until=entry.restricted_until)
-            bot.send_message(config['group'],
+            bot.send_message(alert_chat,
                              text=config['messages']['restore_silence'].format(tg_id=entry.telegram_id),
                              parse_mode='HTML')
     except catbot.RestrictAdminError:
         pass
     except catbot.InsufficientRightError:
-        if right_alert_chat:
-            bot.send_message(right_alert_chat, text=config['messages']['insufficient_right'])
+        if alert_chat:
+            bot.send_message(alert_chat, text=config['messages']['insufficient_right'])
     except catbot.UserNotFoundError:
         pass
-
 
 
 def start_cri(msg: catbot.Message) -> bool:
@@ -344,7 +343,6 @@ def new_member(msg: catbot.Message):
         bot.send_message(config['group'], text=config['messages']['new_member_hint'], reply_to_message_id=msg.id)
 
 
-
 def add_whitelist_cri(msg: catbot.Message) -> bool:
     return command_detector('/add_whitelist', msg)
 
@@ -395,7 +393,7 @@ def add_whitelist(msg: catbot.Message):
     bot.send_message(msg.chat.id, text=config['messages']['add_whitelist_succ'].format(tg_id=whitelist_id),
                      reply_to_message_id=msg.id)
 
-    lift_restriction_trial(entry)
+    lift_restriction_trial(entry, msg.chat.id)
 
 
 def remove_whitelist_cri(msg: catbot.Message) -> bool:
