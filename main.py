@@ -353,9 +353,13 @@ def add_whitelist(msg: catbot.Message):
             reason = 'whitelisted'
     else:
         if len(user_input_token) < 2:
-            bot.send_message(msg.chat.id, text=config['messages']['add_whitelist_prompt'], reply_to_message_id=msg.id)
+            bot.send_message(msg.chat.id, text=config['messages']['general_prompt'], reply_to_message_id=msg.id)
             return
-        whitelist_id = int(user_input_token[1])
+        try:
+            whitelist_id = int(user_input_token[1])
+        except ValueError:
+            bot.send_message(msg.chat.id, text=config['messages']['telegram_id_error'], reply_to_message_id=msg.id)
+            return
         if len(user_input_token) > 2:
             reason = ' '.join(user_input_token[2:])
         else:
@@ -414,9 +418,13 @@ def remove_whitelist(msg: catbot.Message):
         whitelist_id = msg.reply_to_message.from_.id
     else:
         if len(user_input_token) < 2:
-            bot.send_message(msg.chat.id, text=config['messages']['add_whitelist_prompt'], reply_to_message_id=msg.id)
+            bot.send_message(msg.chat.id, text=config['messages']['general_prompt'], reply_to_message_id=msg.id)
             return
-        whitelist_id = int(user_input_token[1])
+        try:
+            whitelist_id = int(user_input_token[1])
+        except ValueError:
+            bot.send_message(msg.chat.id, text=config['messages']['telegram_id_error'], reply_to_message_id=msg.id)
+            return
 
     try:
         whitelist_user = bot.get_chat_member(config['group'], whitelist_id)
@@ -534,6 +542,7 @@ def refuse(msg: catbot.Message):
         try:
             refused_id = int(user_input_token[1])
         except ValueError:
+            bot.send_message(msg.chat.id, text=config['messages']['telegram_id_error'], reply_to_message_id=msg.id)
             return
 
     try:
@@ -601,6 +610,7 @@ def accept(msg: catbot.Message):
         try:
             accepted_id = int(user_input_token[1])
         except ValueError:
+            bot.send_message(msg.chat.id, text=config['messages']['telegram_id_error'], reply_to_message_id=msg.id)
             return
 
     with t_lock:
