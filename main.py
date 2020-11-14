@@ -308,7 +308,7 @@ def new_member(msg: catbot.Message):
         restricted_until = user_chat.until_date
         if restricted_until == 0:
             restricted_until = -1  # Restricted by bot, keep entry.restricted_until unchanged later
-    elif user_chat.status == 'creator' or user_chat.status == 'administrator':
+    elif user_chat.status == 'creator' or user_chat.status == 'administrator' or user_chat.status == 'kicked':
         return
     else:
         restricted_until = 0
