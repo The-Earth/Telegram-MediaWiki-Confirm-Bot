@@ -112,6 +112,9 @@ def confirm(msg: catbot.Message):
                                          wp_name=entry.wikimedia_username))
                     return
                 else:
+                    if entry.refused:
+                        bot.send_message(msg.chat.id, text=config['messages']['confirm_ineligible'])
+                        return
                     entry_index = i
 
             elif entry.wikimedia_username == wikimedia_username and (entry.confirmed or entry.confirming):
@@ -509,6 +512,116 @@ def whois(msg: catbot.Message):
                      disable_web_page_preview=True)
 
 
+def refuse_cri(msg: catbot.Message) -> bool:
+    return command_detector('/refuse', msg)
+
+
+def refuse(msg: catbot.Message):
+    try:
+        operator = bot.get_chat_member(config['group'], msg.from_.id)
+    except catbot.UserNotFoundError:
+        return
+    if not (operator.status == 'creator' or operator.status == 'administrator'):
+        return
+
+    if msg.reply:
+        refused_id = msg.reply_to_message.from_.id
+    else:
+        user_input_token = msg.text.split()
+        if len(user_input_token) < 2:
+            bot.send_message(msg.chat.id, text=config['messages']['general_prompt'], reply_to_message_id=msg.id)
+            return
+        try:
+            refused_id = int(user_input_token[1])
+        except ValueError:
+            return
+
+    try:
+        refused_user = bot.get_chat_member(config['group'], refused_id)
+    except catbot.UserNotFoundError:
+        restricted_until = 0
+    else:
+        if refused_user.status == 'restricted':
+            restricted_until = refused_user.until_date
+            if restricted_until == 0:
+                restricted_until = -1
+        else:
+            restricted_until = 0
+
+    with t_lock:
+        ac_list, rec = record_empty_test('ac', list)
+        for i in range(len(ac_list)):
+            entry = Ac.from_dict(ac_list[i])
+            if entry.telegram_id == refused_id:
+                refused_index = i
+                break
+        else:
+            entry = Ac(refused_id)
+            ac_list.append(entry)
+            refused_index = -1
+
+        if restricted_until != -1:
+            entry.restricted_until = restricted_until
+        entry.confirmed = False
+        entry.confirming = False
+        entry.refused = True
+        ac_list[refused_index] = entry.to_dict()
+        rec['ac'] = ac_list
+        json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+
+    log(config['messages']['refuse_log'].format(tg_id=refused_id, refuser=operator.name))
+
+    if not entry.whitelist_reason:
+        try:
+            bot.silence_chat_member(config['group'], refused_id)
+        except catbot.InsufficientRightError:
+            pass
+        except catbot.RestrictAdminError:
+            pass
+        except catbot.UserNotFoundError:
+            pass
+
+
+def accept_cri(msg: catbot.Message) -> bool:
+    return command_detector('/accept', msg)
+
+
+def accept(msg: catbot.Message):
+    operator = bot.get_chat_member(config['group'], msg.from_.id)
+    if not (operator.status == 'creator' or operator.status == 'administrator'):
+        return
+
+    if msg.reply:
+        accepted_id = msg.reply_to_message.from_.id
+    else:
+        user_input_token = msg.text.split()
+        if len(user_input_token) < 2:
+            bot.send_message(msg.chat.id, text=config['messages']['general_prompt'], reply_to_message_id=msg.id)
+            return
+        try:
+            accepted_id = int(user_input_token[1])
+        except ValueError:
+            return
+
+    with t_lock:
+        ac_list, rec = record_empty_test('ac', list)
+        for i in range(len(ac_list)):
+            entry = Ac.from_dict(ac_list[i])
+            if entry.telegram_id == accepted_id:
+                accepted_index = i
+                break
+        else:
+            entry = Ac(accepted_id)
+            ac_list.append(entry)
+            accepted_index = -1
+        entry.refused = False
+        ac_list[accepted_index] = entry.to_dict()
+        rec['ac'] = ac_list
+        json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+
+    log(config['messages']['accept_log'].format(tg_id=accepted_id, acceptor=operator.name))
+
+
 if __name__ == '__main__':
     bot.add_msg_task(start_cri, start)
     bot.add_msg_task(policy_cri, policy)
@@ -520,6 +633,8 @@ if __name__ == '__main__':
     bot.add_msg_task(deconfirm_cri, deconfirm)
     bot.add_query_task(deconfirm_button_cri, deconfirm_button)
     bot.add_msg_task(whois_cri, whois)
+    bot.add_msg_task(refuse_cri, refuse)
+    bot.add_msg_task(accept_cri, accept)
 
     while True:
         try:
