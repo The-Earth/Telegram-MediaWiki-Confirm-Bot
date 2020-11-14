@@ -47,6 +47,44 @@ def log(text):
     bot.send_message(config['log_channel'], text=text, parse_mode='HTML', disable_web_page_preview=True)
 
 
+def silence_trial(entry: Ac, right_alert_chat=0):
+    member = bot.get_chat_member(config['group'], entry.telegram_id)
+    if member.status == 'kicked':
+        return
+    if not (entry.confirmed or entry.whitelist_reason):
+        try:
+            bot.silence_chat_member(config['group'], entry.telegram_id)
+        except catbot.InsufficientRightError:
+            if right_alert_chat:
+                bot.send_message(right_alert_chat, text=config['messages']['insufficient_right'])
+        except catbot.RestrictAdminError:
+            pass
+        except catbot.UserNotFoundError:
+            pass
+
+
+def lift_restriction_trial(entry: Ac, right_alert_chat=0):
+    member = bot.get_chat_member(config['group'], entry.telegram_id)
+    if member.status == 'kicked':
+        return
+    try:
+        if entry.restricted_until <= time.time() + 35:
+            bot.lift_restrictions(config['group'], entry.telegram_id)
+        else:
+            bot.silence_chat_member(config['group'], entry.telegram_id, until=entry.restricted_until)
+            bot.send_message(config['group'],
+                             text=config['messages']['restore_silence'].format(tg_id=entry.telegram_id),
+                             parse_mode='HTML')
+    except catbot.RestrictAdminError:
+        pass
+    except catbot.InsufficientRightError:
+        if right_alert_chat:
+            bot.send_message(right_alert_chat, text=config['messages']['insufficient_right'])
+    except catbot.UserNotFoundError:
+        pass
+
+
+
 def start_cri(msg: catbot.Message) -> bool:
     return command_detector('/start', msg) and msg.chat.type == 'private'
 
@@ -192,26 +230,14 @@ def confirm_button(query: catbot.CallbackQuery):
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    try:
-        if entry.confirmed:
-            log(config['messages']['confirm_log'].format(tg_id=entry.telegram_id, wp_id=entry.wikimedia_username,
-                                                         site=config['main_site']))
-            bot.send_message(query.msg.chat.id, text=config['messages']['confirm_complete'])
-            if entry.restricted_until <= time.time() + 35:
-                bot.lift_restrictions(config['group'], query.from_.id)
-            else:
-                bot.silence_chat_member(config['group'], query.from_.id, until=entry.restricted_until)
-                bot.send_message(config['group'],
-                                 text=config['messages']['restore_silence'].format(tg_id=entry.telegram_id),
-                                 parse_mode='HTML')
-        else:
-            bot.send_message(query.msg.chat.id, text=config['messages']['confirm_failed'])
-    except catbot.RestrictAdminError:
-        pass
-    except catbot.InsufficientRightError:
-        bot.send_message(config['group'], text=config['messages']['insufficient_right'])
-    except catbot.UserNotFoundError:
-        pass
+    log(config['messages']['confirm_log'].format(tg_id=entry.telegram_id, wp_id=entry.wikimedia_username,
+                                                 site=config['main_site']))
+
+    if entry.confirmed:
+        bot.send_message(query.msg.chat.id, text=config['messages']['confirm_complete'])
+        lift_restriction_trial(entry)
+    else:
+        bot.send_message(query.msg.chat.id, text=config['messages']['confirm_failed'])
 
 
 def deconfirm_cri(msg: catbot.Message) -> bool:
@@ -267,15 +293,7 @@ def deconfirm_button(query: catbot.CallbackQuery):
                                                    site=config['main_site']))
     bot.send_message(query.msg.chat.id, text=config['messages']['deconfirm_succ'])
 
-    if not entry.whitelist_reason:
-        try:
-            bot.silence_chat_member(config['group'], query.from_.id)
-        except catbot.InsufficientRightError:
-            bot.send_message(config['group'], text=config['messages']['insufficient_right'])
-        except catbot.RestrictAdminError:
-            pass
-        except catbot.UserNotFoundError:
-            pass
+    silence_trial(entry)
 
 
 def new_member_cri(msg: catbot.Message) -> bool:
@@ -320,19 +338,11 @@ def new_member(msg: catbot.Message):
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    try:
-        if entry.confirmed or entry.whitelist_reason:
-            if entry.restricted_until <= time.time() + 35:
-                bot.lift_restrictions(config['group'], user.id)
-            else:
-                bot.silence_chat_member(config['group'], user.id, until=entry.restricted_until)
-                bot.send_message(config['group'],
-                                 text=config['messages']['restore_silence'].format(tg_id=entry.telegram_id),
-                                 parse_mode='HTML')
-        else:
-            bot.send_message(config['group'], text=config['messages']['new_member_hint'], reply_to_message_id=msg.id)
-    except catbot.InsufficientRightError:
-        pass
+    if entry.confirmed or entry.whitelist_reason:
+        lift_restriction_trial(entry, config['group'])
+    else:
+        bot.send_message(config['group'], text=config['messages']['new_member_hint'], reply_to_message_id=msg.id)
+
 
 
 def add_whitelist_cri(msg: catbot.Message) -> bool:
@@ -385,20 +395,7 @@ def add_whitelist(msg: catbot.Message):
     bot.send_message(msg.chat.id, text=config['messages']['add_whitelist_succ'].format(tg_id=whitelist_id),
                      reply_to_message_id=msg.id)
 
-    try:
-        if entry.restricted_until <= time.time() + 35:
-            bot.lift_restrictions(config['group'], whitelist_id)
-        else:
-            bot.silence_chat_member(config['group'], whitelist_id, until=entry.restricted_until)
-            bot.send_message(config['group'],
-                             text=config['messages']['restore_silence'].format(tg_id=entry.telegram_id),
-                             parse_mode='HTML')
-    except catbot.RestrictAdminError:
-        pass
-    except catbot.InsufficientRightError:
-        bot.send_message(msg.chat.id, text=config['messages']['insufficient_right'])
-    except catbot.UserNotFoundError:
-        pass
+    lift_restriction_trial(entry)
 
 
 def remove_whitelist_cri(msg: catbot.Message) -> bool:
@@ -460,15 +457,7 @@ def remove_whitelist(msg: catbot.Message):
     bot.send_message(msg.chat.id, text=config['messages']['remove_whitelist_succ'].format(tg_id=whitelist_id),
                      reply_to_message_id=msg.id)
 
-    if not entry.confirmed:
-        try:
-            bot.silence_chat_member(config['group'], whitelist_id)
-        except catbot.InsufficientRightError:
-            bot.send_message(msg.chat.id, text=config['messages']['insufficient_right'])
-        except catbot.RestrictAdminError:
-            pass
-        except catbot.UserNotFoundError:
-            pass
+    silence_trial(entry, msg.chat.id)
 
 
 def whois_cri(msg: catbot.Message) -> bool:
@@ -580,15 +569,7 @@ def refuse(msg: catbot.Message):
 
     log(config['messages']['refuse_log'].format(tg_id=refused_id, refuser=operator.name))
 
-    if not entry.whitelist_reason:
-        try:
-            bot.silence_chat_member(config['group'], refused_id)
-        except catbot.InsufficientRightError:
-            pass
-        except catbot.RestrictAdminError:
-            pass
-        except catbot.UserNotFoundError:
-            pass
+    silence_trial(entry)
 
 
 def accept_cri(msg: catbot.Message) -> bool:
