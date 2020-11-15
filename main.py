@@ -229,12 +229,11 @@ def confirm_button(query: catbot.CallbackQuery):
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    log(config['messages']['confirm_log'].format(tg_id=entry.telegram_id, wp_id=entry.wikimedia_username,
-                                                 site=config['main_site']))
-
     if entry.confirmed:
         bot.send_message(query.msg.chat.id, text=config['messages']['confirm_complete'])
         lift_restriction_trial(entry)
+        log(config['messages']['confirm_log'].format(tg_id=entry.telegram_id, wp_id=entry.wikimedia_username,
+                                                     site=config['main_site']))
     else:
         bot.send_message(query.msg.chat.id, text=config['messages']['confirm_failed'])
 
