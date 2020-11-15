@@ -148,10 +148,13 @@ def confirm(msg: catbot.Message):
                                      text=config['messages']['confirm_already'].format(
                                          wp_name=entry.wikimedia_username))
                     return
+                elif entry.confirming:
+                    bot.send_message(msg.chat.id, text=config['messages']['confirm_confirming'])
+                    return
+                elif entry.refused:
+                    bot.send_message(msg.chat.id, text=config['messages']['confirm_ineligible'])
+                    return
                 else:
-                    if entry.refused:
-                        bot.send_message(msg.chat.id, text=config['messages']['confirm_ineligible'])
-                        return
                     entry_index = i
 
             elif entry.wikimedia_username == wikimedia_username and (entry.confirmed or entry.confirming):
