@@ -342,7 +342,12 @@ def new_member(msg: catbot.Message):
     if entry.confirmed or entry.whitelist_reason:
         lift_restriction_trial(entry, config['group'])
     else:
-        bot.send_message(config['group'], text=config['messages']['new_member_hint'], reply_to_message_id=msg.id)
+        with t_lock:
+            last_id, rec = record_empty_test('last_welcome', 'int')
+            cur = bot.send_message(config['group'], text=config['messages']['new_member_hint'],
+                                   reply_to_message_id=msg.id)
+            rec['last_welcome'] = cur.id
+            bot.api('deleteMessage', data={'chat_id': config['group'], 'message_id': last_id})
 
 
 def add_whitelist_cri(msg: catbot.Message) -> bool:
