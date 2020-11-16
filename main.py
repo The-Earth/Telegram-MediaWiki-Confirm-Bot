@@ -343,10 +343,11 @@ def new_member(msg: catbot.Message):
         lift_restriction_trial(entry, config['group'])
     else:
         with t_lock:
-            last_id, rec = record_empty_test('last_welcome', 'int')
+            last_id, rec = record_empty_test('last_welcome', int)
             cur = bot.send_message(config['group'], text=config['messages']['new_member_hint'],
                                    reply_to_message_id=msg.id)
             rec['last_welcome'] = cur.id
+            json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
             bot.api('deleteMessage', data={'chat_id': config['group'], 'message_id': last_id})
 
 
