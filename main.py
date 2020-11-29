@@ -348,7 +348,10 @@ def new_member(msg: catbot.Message):
                                    reply_to_message_id=msg.id)
             rec['last_welcome'] = cur.id
             json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
-            bot.api('deleteMessage', data={'chat_id': config['group'], 'message_id': last_id})
+            try:
+                bot.delete_message(config['group'], last_id)
+            except catbot.DeleteMessageError:
+                pass
 
 
 def add_whitelist_cri(msg: catbot.Message) -> bool:
