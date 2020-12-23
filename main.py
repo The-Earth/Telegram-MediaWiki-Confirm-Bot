@@ -111,6 +111,7 @@ def confirm(msg: catbot.Message):
         return
 
     wikimedia_username = '_'.join(user_input_token[1:])
+    wikimedia_username = wikimedia_username[0].upper() + wikimedia_username[1:]
     bot.send_message(msg.chat.id, text=config['messages']['confirm_checking'])
     global_user_info_query = site.api(**{
         "action": "query",
