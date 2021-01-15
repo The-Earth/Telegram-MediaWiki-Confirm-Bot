@@ -97,7 +97,7 @@ def policy_cri(msg: catbot.Message) -> bool:
 
 
 def policy(msg: catbot.Message):
-    bot.send_message(msg.chat.id, text=config['messages']['policy'])
+    bot.send_message(msg.chat.id, text=config['messages']['policy'], parse_mode='HTML')
 
 
 def confirm_cri(msg: catbot.Message) -> bool:
