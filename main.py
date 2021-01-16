@@ -478,34 +478,36 @@ def whois(msg: catbot.Message):
     user_input_token = msg.text.split()
     if msg.reply:
         whois_id = msg.reply_to_message.from_.id
+        whois_wm_name = ''
     else:
         if len(user_input_token) == 1:
             bot.send_message(config['group'], text=config['messages']['whois_prompt'], reply_to_message_id=msg.id)
             return
         else:
             try:
-                whois_id = int(user_input_token[1])
+                whois_id = int(' '.join(user_input_token[1:]))
+                whois_wm_name = ''
             except ValueError:
-                bot.send_message(config['group'], text=config['messages']['whois_inverse'],
-                                 reply_to_message_id=msg.id)
-                return
+                whois_id = 0
+                whois_wm_name = '_'.join(user_input_token[1:])
+                whois_wm_name = whois_wm_name[0].upper() + whois_wm_name[1:]
 
     with t_lock:
         ac_list, rec = record_empty_test('ac', list)
         for i in range(len(ac_list)):
             entry = Ac.from_dict(ac_list[i])
-            if entry.telegram_id == whois_id:
+            if entry.telegram_id == whois_id or entry.wikimedia_username == whois_wm_name:
                 break
         else:
             bot.send_message(config['group'], text=config['messages']['whois_not_found'], reply_to_message_id=msg.id)
             return
 
     try:
-        whois_member = bot.get_chat_member(config['group'], whois_id)
+        whois_member = bot.get_chat_member(entry.telegram_id, entry.telegram_id)
         name = whois_member.name
     except catbot.UserNotFoundError:
         name = ''
-    resp_text = f'{name} ({whois_id})\n'
+    resp_text = f'{name} ({entry.telegram_id})\n'
     if entry.confirmed:
         resp_text += config['messages']['whois_has_wikimedia'].format(
             wp_id=entry.wikimedia_username, ctime=time.strftime('%Y-%m-%d %H:%M', time.gmtime(entry.confirmed_time))
