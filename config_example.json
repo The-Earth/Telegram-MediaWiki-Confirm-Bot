@@ -42,7 +42,7 @@
     "remove_whitelist_not_found": "未在白名单中找到此人",
     "remove_whitelist_log": "#白 #u_{tg_id}\n{remover} 已将 <a href=\"tg://user?id={tg_id}\">{tg_id}</a> 移出白名单",
     "remove_whitelist_succ": "{tg_id} 已移出白名单。",
-    "whois_prompt": "使用方法：以 /whois 回复要查询的用户，或发送 /whois Telegram ID",
+    "whois_prompt": "使用方法：\n1. 以 /whois 回复要查询的用户\n2. /whois <Telegram 数字ID>\n3. /whois <站内用户名>",
     "whois_not_found": "未查到该用户。",
     "whois_has_wikimedia": "维基百科账号：<a href=\"https://zh.wikipedia.org/wiki/Special:Contributions/{wp_id}\">{wp_id}</a>（于 {ctime} (UTC) 验证）",
     "whois_no_wikimedia": "未验证维基百科账户\n",
