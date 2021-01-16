@@ -496,7 +496,7 @@ def whois(msg: catbot.Message):
         ac_list, rec = record_empty_test('ac', list)
         for i in range(len(ac_list)):
             entry = Ac.from_dict(ac_list[i])
-            if entry.telegram_id == whois_id or entry.wikimedia_username == whois_wm_name:
+            if entry.telegram_id == whois_id or (entry.wikimedia_username == whois_wm_name and whois_wm_name != ''):
                 break
         else:
             bot.send_message(config['group'], text=config['messages']['whois_not_found'], reply_to_message_id=msg.id)
