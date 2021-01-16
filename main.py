@@ -503,7 +503,7 @@ def whois(msg: catbot.Message):
             return
 
     try:
-        whois_member = bot.get_chat_member(entry.telegram_id, entry.telegram_id)
+        whois_member = bot.get_chat_member(config['group'], entry.telegram_id)
         name = whois_member.name
     except catbot.UserNotFoundError:
         name = ''
