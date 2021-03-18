@@ -177,7 +177,7 @@ def confirm(msg: catbot.Message):
     button = catbot.InlineKeyboardButton(config['messages']['confirm_button'], callback_data=f'confirm_{h}')
     keyboard = catbot.InlineKeyboard([[button]])
     bot.send_message(msg.chat.id, text=config['messages']['confirm_wait'].format(site=config['main_site'],
-                                                                                 name=wikimedia_username,
+                                                                                 page=config['page_for_confirmation'],
                                                                                  h=h),
                      parse_mode='HTML', disable_web_page_preview=True, reply_markup=keyboard)
 
