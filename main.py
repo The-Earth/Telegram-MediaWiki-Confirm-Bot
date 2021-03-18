@@ -209,7 +209,7 @@ def confirm_button(query: catbot.CallbackQuery):
             return
 
         try:
-            revs = site.Pages[f'User:{entry.wikimedia_username}'].revisions()
+            revs = site.Pages[config['page_for_confirmation']].revisions()
             while True:
                 rev = next(revs)
                 if 0 <= timegm(rev['timestamp']) - query.msg.date <= 180:
