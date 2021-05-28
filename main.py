@@ -298,26 +298,45 @@ def deconfirm_button(query: catbot.CallbackQuery):
     silence_trial(entry)
 
 
-def new_member_cri(msg: catbot.Message) -> bool:
-    return msg.chat.id == config['group'] and hasattr(msg, 'new_chat_members')
+def new_member_cri(msg: catbot.ChatMemberUpdate) -> bool:
+    if not msg.chat.id == config['group']:
+        return False
+    elif msg.new_chat_member.is_bot:
+        return False
+    elif msg.from_.id != msg.new_chat_member.id:
+        return False
+    elif msg.new_chat_member.status == 'member':
+        if msg.old_chat_member.status == 'left':
+            return True
+        elif msg.old_chat_member.status == 'restricted' and not msg.old_chat_member.is_member:
+            return True
+        else:
+            return False
+    elif msg.new_chat_member.status == 'restricted' and msg.new_chat_member.is_member:
+        if msg.old_chat_member.status == 'left':
+            return True
+        elif msg.old_chat_member.status == 'restricted' and not msg.old_chat_member.is_member:
+            return True
+        else:
+            return False
+    else:
+        return False
 
 
-def new_member(msg: catbot.Message):
-    user = msg.new_chat_members[0]
-    user_chat = bot.get_chat_member(config['group'], user.id)
-    if user_chat.is_bot:
-        return
-    if user_chat.status == 'restricted':
-        restricted_until = user_chat.until_date
+def new_member(msg: catbot.ChatMemberUpdate):
+    if msg.new_chat_member.status == 'restricted':
+        restricted_until = msg.new_chat_member.until_date
         if restricted_until == 0:
             restricted_until = -1  # Restricted by bot, keep entry.restricted_until unchanged later
-    elif user_chat.status == 'creator' or user_chat.status == 'administrator' or user_chat.status == 'kicked':
+    elif msg.new_chat_member.status == 'creator' or \
+            msg.new_chat_member.status == 'administrator' or \
+            msg.new_chat_member.status == 'kicked':
         return
     else:
         restricted_until = 0
 
     try:
-        bot.silence_chat_member(config['group'], user.id)
+        bot.silence_chat_member(config['group'], msg.new_chat_member.id)
     except catbot.InsufficientRightError:
         bot.send_message(config['group'], text=config['messages']['insufficient_right'])
         return
@@ -326,7 +345,7 @@ def new_member(msg: catbot.Message):
         ac_list, rec = record_empty_test('ac', list)
         for i in range(len(ac_list)):
             entry = Ac.from_dict(ac_list[i])
-            if entry.telegram_id == user.id:
+            if entry.telegram_id == msg.new_chat_member.id:
                 user_index = i
                 break
         else:
@@ -345,8 +364,10 @@ def new_member(msg: catbot.Message):
     else:
         with t_lock:
             last_id, rec = record_empty_test('last_welcome', int)
-            cur = bot.send_message(config['group'], text=config['messages']['new_member_hint'],
-                                   reply_to_message_id=msg.id)
+            cur = bot.send_message(config['group'],
+                                   text=config['messages']['new_member_hint'].format(tg_id=msg.new_chat_member.id,
+                                                                                     tg_name=msg.new_chat_member.name),
+                                   parse_mode='HTML')
             rec['last_welcome'] = cur.id
             json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
             try:
@@ -630,7 +651,7 @@ if __name__ == '__main__':
     bot.add_msg_task(policy_cri, policy)
     bot.add_msg_task(confirm_cri, confirm)
     bot.add_query_task(confirm_button_cri, confirm_button)
-    bot.add_msg_task(new_member_cri, new_member)
+    bot.add_member_status_task(new_member_cri, new_member)
     bot.add_msg_task(add_whitelist_cri, add_whitelist)
     bot.add_msg_task(remove_whitelist_cri, remove_whitelist)
     bot.add_msg_task(deconfirm_cri, deconfirm)

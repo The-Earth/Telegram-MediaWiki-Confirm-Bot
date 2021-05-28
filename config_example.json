@@ -35,7 +35,7 @@
     "deconfirm_succ": "已解除与维基百科账户的关联。",
     "deconfirm_not_confirmed": "您目前没有验证维基百科用户身份。",
     "deconfirm_log": "#解 #u_{tg_id}\n<a href=\"tg://user?id={tg_id}\">{tg_id}</a> 已解除与 <a href=\"https://zh.wikipedia.org/wiki/Special:Contributions/{wp_id}\">{wp_id}</a> 的关联",
-    "new_member_hint": "您好，请私聊我验证您的维基百科账号以取得发言权限。",
+    "new_member_hint": "<a href=\"tg://user?id={tg_id}\">{tg_name}</a> 您好，请私聊我验证您的维基百科账号以取得发言权限。",
     "add_whitelist_prompt": "使用方法：/add_whitelist 用户ID 备注",
     "add_whitelist_succ": "{tg_id} 已加入白名单。",
     "add_whitelist_log": "#白 #u_{tg_id}\n{adder} 已将 <a href=\"tg://user?id={tg_id}\">{tg_id}</a> 加入白名单，备注：{reason}",
