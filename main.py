@@ -517,7 +517,8 @@ def whois(msg: catbot.Message):
         ac_list, rec = record_empty_test('ac', list)
         for i in range(len(ac_list)):
             entry = Ac.from_dict(ac_list[i])
-            if entry.telegram_id == whois_id or (entry.wikimedia_username == whois_wm_name and whois_wm_name != ''):
+            if (entry.confirmed or entry.whitelist_reason) and (entry.telegram_id == whois_id or (
+                    entry.wikimedia_username == whois_wm_name and whois_wm_name != '')):
                 break
         else:
             bot.send_message(config['group'], text=config['messages']['whois_not_found'], reply_to_message_id=msg.id)
@@ -527,8 +528,9 @@ def whois(msg: catbot.Message):
         whois_member = bot.get_chat_member(config['group'], entry.telegram_id)
         name = whois_member.name
     except catbot.UserNotFoundError:
-        name = ''
+        name = config['messages']['whois_tg_name_unavailable']
     resp_text = f'{name} ({entry.telegram_id})\n'
+
     if entry.confirmed:
         resp_text += config['messages']['whois_has_wikimedia'].format(
             wp_id=entry.wikimedia_username, ctime=time.strftime('%Y-%m-%d %H:%M', time.gmtime(entry.confirmed_time))

@@ -48,6 +48,7 @@
     "whois_has_wikimedia": "维基百科账号：<a href=\"https://zh.wikipedia.org/wiki/Special:Contributions/{wp_id}\">{wp_id}</a>（于 {ctime} (UTC) 验证）",
     "whois_no_wikimedia": "未验证维基百科账户\n",
     "whois_whitelisted": "该用户在白名单中，备注：{reason}",
+    "whois_tg_name_unavailable": "（无法获取Telegram用户名）",
     "refuse_log": "#禁 #u_{tg_id}\n{refuser} 已禁止 <a href=\"tg://user?id={tg_id}\">{tg_id}</a> 进行验证。",
     "accept_log": "#禁 #u_{tg_id}\n{acceptor} 已允许 <a href=\"tg://user?id={tg_id}\">{tg_id}</a> 进行验证。"
   }
