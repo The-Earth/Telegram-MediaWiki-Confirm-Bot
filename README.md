@@ -1,5 +1,7 @@
 # Telegram-MediaWiki-Confirm-Bot
 
+验证并关联mediawiki站点账户与Telegram账户，并在Telegram群组中禁止未通过验证的人发言。适用于安装了[CentralAuth](https://www.mediawiki.org/wiki/Extension:CentralAuth)的mediawiki网站，未安装该扩展的网站可使用`single_wiki`分支的版本。以下说明以维基百科为例。
+
 ## 常见问题
 
 - 群管执行操作时需要注意什么？
@@ -13,7 +15,7 @@
 - 启用机器人之前已经在群里的用户会被禁言吗？
     - 不会。不过当他们解除验证或被移出白名单时，仍然会被禁言。
 - 机器人故障时入群的人，在机器人复工后会被如何处理？
-    - 会在复工时处理先前未被处理的事件，按用户是否完成验证及处于白名单内决定是否对其禁言。
+    - 不会有任何处理。
 
 ## 使用说明
 
