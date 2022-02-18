@@ -84,6 +84,17 @@ def lift_restriction_trial(entry: Ac, alert_chat=0):
         pass
 
 
+def html_refer(ori: str) -> str:
+    refer = {
+        '<': '&lt;',
+        '>': '&gt;',
+    }
+    for k in refer:
+        ori = ori.replace(k, refer[k])
+
+    return ori
+
+
 def start_cri(msg: catbot.Message) -> bool:
     return command_detector('/start', msg) and msg.chat.type == 'private'
 
@@ -365,8 +376,9 @@ def new_member(msg: catbot.ChatMemberUpdate):
         with t_lock:
             last_id, rec = record_empty_test('last_welcome', int)
             cur = bot.send_message(config['group'],
-                                   text=config['messages']['new_member_hint'].format(tg_id=msg.new_chat_member.id,
-                                                                                     tg_name=msg.new_chat_member.name),
+                                   text=config['messages']['new_member_hint'].format(
+                                       tg_id=msg.new_chat_member.id,
+                                       tg_name=html_refer(msg.new_chat_member.name)),
                                    parse_mode='HTML')
             rec['last_welcome'] = cur.id
             json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
@@ -422,7 +434,7 @@ def add_whitelist(msg: catbot.Message):
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    log(config['messages']['add_whitelist_log'].format(adder=adder.name, tg_id=whitelist_id, reason=reason))
+    log(config['messages']['add_whitelist_log'].format(adder=html_refer(adder.name), tg_id=whitelist_id, reason=reason))
     bot.send_message(msg.chat.id, text=config['messages']['add_whitelist_succ'].format(tg_id=whitelist_id),
                      reply_to_message_id=msg.id)
 
@@ -484,7 +496,7 @@ def remove_whitelist(msg: catbot.Message):
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    log(config['messages']['remove_whitelist_log'].format(remover=remover.name, tg_id=whitelist_id))
+    log(config['messages']['remove_whitelist_log'].format(remover=html_refer(remover.name), tg_id=whitelist_id))
     bot.send_message(msg.chat.id, text=config['messages']['remove_whitelist_succ'].format(tg_id=whitelist_id),
                      reply_to_message_id=msg.id)
 
@@ -526,7 +538,7 @@ def whois(msg: catbot.Message):
 
     try:
         whois_member = bot.get_chat_member(config['group'], entry.telegram_id)
-        name = whois_member.name
+        name = html_refer(whois_member.name)
     except catbot.UserNotFoundError:
         name = config['messages']['whois_tg_name_unavailable']
     resp_text = f'{name} ({entry.telegram_id})\n'
@@ -604,7 +616,7 @@ def refuse(msg: catbot.Message):
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    log(config['messages']['refuse_log'].format(tg_id=refused_id, refuser=operator.name))
+    log(config['messages']['refuse_log'].format(tg_id=refused_id, refuser=html_refer(operator.name)))
 
     silence_trial(entry)
 
@@ -647,7 +659,7 @@ def accept(msg: catbot.Message):
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    log(config['messages']['accept_log'].format(tg_id=accepted_id, acceptor=operator.name))
+    log(config['messages']['accept_log'].format(tg_id=accepted_id, acceptor=html_refer(operator.name)))
 
 
 if __name__ == '__main__':
