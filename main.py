@@ -5,6 +5,7 @@ from calendar import timegm
 
 import catbot
 import mwclient
+from catbot.util import html_refer
 
 from ac import Ac
 
@@ -12,35 +13,6 @@ config = json.load(open('config.json', 'r', encoding='utf-8'))
 bot = catbot.Bot(config)
 t_lock = threading.Lock()
 site = mwclient.Site(config['main_site'], reqs=bot.proxy_kw)
-
-
-def command_detector(cmd: str, msg: catbot.Message) -> bool:
-    if cmd in msg.commands:
-        return msg.text.startswith(cmd)
-    elif f'{cmd}@{bot.username}' in msg.commands:
-        return msg.text.startswith(f'{cmd}@{bot.username}')
-    else:
-        return False
-
-
-def record_empty_test(key: str, data_type):
-    """
-    :param key: Name of the data you want in record file
-    :param data_type: Type of the data. For example, if it is trusted user list, data_type will be list.
-    :return: Returns a tuple. The first element is the data you asked for. The second is the deserialized record file.
-    """
-    try:
-        rec = json.load(open(config['record'], 'r', encoding='utf-8'))
-    except FileNotFoundError:
-        record_list, rec = data_type(), {}
-        json.dump({key: record_list}, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
-    else:
-        if key in rec.keys():
-            record_list = rec[key]
-        else:
-            record_list = data_type()
-
-    return record_list, rec
 
 
 def log(text):
@@ -84,19 +56,8 @@ def lift_restriction_trial(entry: Ac, alert_chat=0):
         pass
 
 
-def html_refer(ori: str) -> str:
-    refer = {
-        '<': '&lt;',
-        '>': '&gt;',
-    }
-    for k in refer:
-        ori = ori.replace(k, refer[k])
-
-    return ori
-
-
 def start_cri(msg: catbot.Message) -> bool:
-    return command_detector('/start', msg) and msg.chat.type == 'private'
+    return bot.detect_command('/start', msg) and msg.chat.type == 'private'
 
 
 def start(msg: catbot.Message):
@@ -104,7 +65,7 @@ def start(msg: catbot.Message):
 
 
 def policy_cri(msg: catbot.Message) -> bool:
-    return command_detector('/policy', msg)
+    return bot.detect_command('/policy', msg)
 
 
 def policy(msg: catbot.Message):
@@ -112,7 +73,7 @@ def policy(msg: catbot.Message):
 
 
 def confirm_cri(msg: catbot.Message) -> bool:
-    return command_detector('/confirm', msg) and msg.chat.type == 'private'
+    return bot.detect_command('/confirm', msg) and msg.chat.type == 'private'
 
 
 def confirm(msg: catbot.Message):
@@ -149,7 +110,7 @@ def confirm(msg: catbot.Message):
         return
 
     with t_lock:
-        ac_list, rec = record_empty_test('ac', list)
+        ac_list, rec = bot.secure_record_fetch('ac', list)
 
         entry_index = -1
         for i in range(len(ac_list)):
@@ -203,7 +164,7 @@ def confirm_button(query: catbot.CallbackQuery):
     bot.edit_message(query.msg.chat.id, query.msg.id, text=query.msg.html_formatted_text, parse_mode='HTML',
                      disable_web_page_preview=True)
     with t_lock:
-        ac_list, rec = record_empty_test('ac', list)
+        ac_list, rec = bot.secure_record_fetch('ac', list)
         for i in range(len(ac_list)):
             entry = Ac.from_dict(ac_list[i])
             if entry.telegram_id != query.from_.id:
@@ -254,7 +215,7 @@ def confirm_button(query: catbot.CallbackQuery):
 
 
 def deconfirm_cri(msg: catbot.Message) -> bool:
-    return command_detector('/deconfirm', msg) and msg.chat.type == 'private'
+    return bot.detect_command('/deconfirm', msg) and msg.chat.type == 'private'
 
 
 def deconfirm(msg: catbot.Message):
@@ -282,7 +243,7 @@ def deconfirm_button(query: catbot.CallbackQuery):
             restricted_until = 0
 
     with t_lock:
-        ac_list, rec = record_empty_test('ac', list)
+        ac_list, rec = bot.secure_record_fetch('ac', list)
         for i in range(len(ac_list)):
             entry = Ac.from_dict(ac_list[i])
             if entry.telegram_id == query.from_.id:
@@ -353,7 +314,7 @@ def new_member(msg: catbot.ChatMemberUpdate):
         return
 
     with t_lock:
-        ac_list, rec = record_empty_test('ac', list)
+        ac_list, rec = bot.secure_record_fetch('ac', list)
         for i in range(len(ac_list)):
             entry = Ac.from_dict(ac_list[i])
             if entry.telegram_id == msg.new_chat_member.id:
@@ -374,7 +335,7 @@ def new_member(msg: catbot.ChatMemberUpdate):
         lift_restriction_trial(entry, config['group'])
     else:
         with t_lock:
-            last_id, rec = record_empty_test('last_welcome', int)
+            last_id, rec = bot.secure_record_fetch('last_welcome', int)
             cur = bot.send_message(config['group'],
                                    text=config['messages']['new_member_hint'].format(
                                        tg_id=msg.new_chat_member.id,
@@ -389,7 +350,7 @@ def new_member(msg: catbot.ChatMemberUpdate):
 
 
 def add_whitelist_cri(msg: catbot.Message) -> bool:
-    return command_detector('/add_whitelist', msg)
+    return bot.detect_command('/add_whitelist', msg)
 
 
 def add_whitelist(msg: catbot.Message):
@@ -419,7 +380,7 @@ def add_whitelist(msg: catbot.Message):
             reason = 'whitelisted'
 
     with t_lock:
-        ac_list, rec = record_empty_test('ac', list)
+        ac_list, rec = bot.secure_record_fetch('ac', list)
         for i in range(len(ac_list)):
             entry = Ac.from_dict(ac_list[i])
             if entry.telegram_id == whitelist_id:
@@ -442,7 +403,7 @@ def add_whitelist(msg: catbot.Message):
 
 
 def remove_whitelist_cri(msg: catbot.Message) -> bool:
-    return command_detector('/remove_whitelist', msg)
+    return bot.detect_command('/remove_whitelist', msg)
 
 
 def remove_whitelist(msg: catbot.Message):
@@ -479,7 +440,7 @@ def remove_whitelist(msg: catbot.Message):
             restricted_until = 0
 
     with t_lock:
-        ac_list, rec = record_empty_test('ac', list)
+        ac_list, rec = bot.secure_record_fetch('ac', list)
         for i in range(len(ac_list)):
             entry = Ac.from_dict(ac_list[i])
             if entry.telegram_id == whitelist_id and entry.whitelist_reason:
@@ -504,7 +465,7 @@ def remove_whitelist(msg: catbot.Message):
 
 
 def whois_cri(msg: catbot.Message) -> bool:
-    return command_detector('/whois', msg) and msg.chat.id == config['group']
+    return bot.detect_command('/whois', msg) and msg.chat.id == config['group']
 
 
 def whois(msg: catbot.Message):
@@ -526,7 +487,7 @@ def whois(msg: catbot.Message):
                 whois_wm_name = whois_wm_name[0].upper() + whois_wm_name[1:]
 
     with t_lock:
-        ac_list, rec = record_empty_test('ac', list)
+        ac_list, rec = bot.secure_record_fetch('ac', list)
         for i in range(len(ac_list)):
             entry = Ac.from_dict(ac_list[i])
             if (entry.confirmed or entry.whitelist_reason) and (entry.telegram_id == whois_id or (
@@ -559,7 +520,7 @@ def whois(msg: catbot.Message):
 
 
 def refuse_cri(msg: catbot.Message) -> bool:
-    return command_detector('/refuse', msg)
+    return bot.detect_command('/refuse', msg)
 
 
 def refuse(msg: catbot.Message):
@@ -596,7 +557,7 @@ def refuse(msg: catbot.Message):
             restricted_until = 0
 
     with t_lock:
-        ac_list, rec = record_empty_test('ac', list)
+        ac_list, rec = bot.secure_record_fetch('ac', list)
         for i in range(len(ac_list)):
             entry = Ac.from_dict(ac_list[i])
             if entry.telegram_id == refused_id:
@@ -622,7 +583,7 @@ def refuse(msg: catbot.Message):
 
 
 def accept_cri(msg: catbot.Message) -> bool:
-    return command_detector('/accept', msg)
+    return bot.detect_command('/accept', msg)
 
 
 def accept(msg: catbot.Message):
@@ -644,7 +605,7 @@ def accept(msg: catbot.Message):
             return
 
     with t_lock:
-        ac_list, rec = record_empty_test('ac', list)
+        ac_list, rec = bot.secure_record_fetch('ac', list)
         for i in range(len(ac_list)):
             entry = Ac.from_dict(ac_list[i])
             if entry.telegram_id == accepted_id:
