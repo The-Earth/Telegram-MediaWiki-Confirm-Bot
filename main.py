@@ -634,6 +634,8 @@ def block_unconfirmed(msg: catbot.Message):
             entry = Ac.from_dict(item)
             if entry.telegram_id == msg.from_.id and entry.confirmed:
                 return
+            if entry.telegram_id == msg.from_.id and entry.whitelist_reason:
+                return
 
     try:
         bot.delete_message(config['group'], msg.id)
