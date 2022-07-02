@@ -628,6 +628,8 @@ def block_unconfirmed_cri(msg: catbot.Message) -> bool:
 
 
 def block_unconfirmed(msg: catbot.Message):
+    if hasattr(msg, 'new_chat_members') or hasattr(msg, 'left_chat_member'):
+        return
     with t_lock:
         ac_list, rec = bot.secure_record_fetch('ac', list)
         for i, item in enumerate(ac_list):
