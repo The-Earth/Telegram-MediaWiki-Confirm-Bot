@@ -623,6 +623,24 @@ def accept(msg: catbot.Message):
     log(config['messages']['accept_log'].format(tg_id=accepted_id, acceptor=html_refer(operator.name)))
 
 
+def block_unconfirmed_cri(msg: catbot.Message) -> bool:
+    return msg.chat.id == config['group']
+
+
+def block_unconfirmed(msg: catbot.Message):
+    with t_lock:
+        ac_list, rec = bot.secure_record_fetch('ac', list)
+        for i, item in enumerate(ac_list):
+            entry = Ac.from_dict(item)
+            if entry.telegram_id == msg.from_.id and entry.confirmed:
+                return
+
+    try:
+        bot.delete_message(config['group'], msg.id)
+    except catbot.DeleteMessageError:
+        print(f'[Error] Delete message {msg.id} failed.')
+
+
 if __name__ == '__main__':
     bot.add_msg_task(start_cri, start)
     bot.add_msg_task(policy_cri, policy)
@@ -636,6 +654,7 @@ if __name__ == '__main__':
     bot.add_msg_task(whois_cri, whois)
     bot.add_msg_task(refuse_cri, refuse)
     bot.add_msg_task(accept_cri, accept)
+    bot.add_msg_task(block_unconfirmed_cri, block_unconfirmed)
 
     while True:
         try:
