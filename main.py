@@ -57,7 +57,7 @@ def lift_restriction_trial(entry: Ac, alert_chat=0):
         pass
 
 
-def check_eligibility(query: catbot.CallbackQuery, mw_username: str) -> bool:
+def check_eligibility(query: catbot.CallbackQuery, mw_id: str) -> tuple[bool, str]:
     bot.send_message(query.msg.chat.id, text=config['messages']['confirm_checking'])
     global_user_info_query = site.api(**{
         "action": "query",
@@ -65,23 +65,24 @@ def check_eligibility(query: catbot.CallbackQuery, mw_username: str) -> bool:
         "meta": "globaluserinfo",
         "utf8": 1,
         "formatversion": "2",
-        "guiuser": mw_username,
+        "guiid": mw_id,
         "guiprop": "merged"
     })
 
     if 'missing' in global_user_info_query['query']['globaluserinfo'].keys():
         bot.send_message(query.msg.chat.id, text=config['messages']['confirm_user_not_found'].format(
-            name=mw_username))
-        return False
+            mw_id=mw_id))
+        return False, ''
 
     global_user_info = global_user_info_query['query']['globaluserinfo']['merged']
+    username = global_user_info_query['query']['globaluserinfo']['name']
     for local_user in global_user_info:
         if local_user['editcount'] >= 50 and time.time() - \
                 timegm(time.strptime(local_user['registration'], '%Y-%m-%dT%H:%M:%SZ')) > 7 * 86400:
-            return True
+            return True, username
     else:
         bot.send_message(query.msg.chat.id, text=config['messages']['confirm_ineligible'])
-        return False
+        return False, username
 
 
 def start_cri(msg: catbot.Message) -> bool:
@@ -174,18 +175,16 @@ def confirm_button(query: catbot.CallbackQuery):
             res = requests.post(config['oauth_query_url'], json={'query_key': config['oauth_query_key'],
                                                                  'telegram_id': str(query.from_.id)})
         except (requests.ConnectTimeout, requests.ConnectionError, requests.HTTPError):
-            eligible = False
+            entry.confirmed = False
         else:
             if res.status_code == 200 and res.json()['ok']:
-                mw_username = res.json()['username']
-                entry.mw_username = mw_username
-                eligible = check_eligibility(query, mw_username)
+                mw_id = res.json()['mw_id']
+                entry.confirmed, entry.mw_username = check_eligibility(query, mw_id)
             else:
-                eligible = False
+                entry.confirmed = False
         finally:
-            if eligible:
+            if entry.confirmed:
                 entry.confirmed_time = time.time()
-            entry.confirmed = eligible
             entry.confirming = False
 
         ac_list[entry_index] = entry.to_dict()
