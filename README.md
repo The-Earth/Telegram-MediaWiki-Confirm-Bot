@@ -1,6 +1,6 @@
 # Telegram-MediaWiki-Confirm-Bot
 
-验证并关联mediawiki站点账户与Telegram账户，并在Telegram群组中禁止未通过验证的人发言。适用于安装了[CentralAuth](https://www.mediawiki.org/wiki/Extension:CentralAuth)的mediawiki网站，未安装该扩展的网站可使用`single_wiki`分支的版本。以下说明以维基百科为例。
+验证并关联 Mediawiki 站点账户与 Telegram 账户，并在 Telegram 群组中禁止未通过验证的人发言。适用于安装了[CentralAuth](https://www.mediawiki.org/wiki/Extension:CentralAuth)和[OAuth](https://www.mediawiki.org/wiki/Extension:OAuth)的mediawiki网站。两者均未安装的网站可使用`single_wiki`分支的版本，安装了前者但未安装后者的版本可使用`non_oauth`分支。以下说明以维基百科为例。
 
 ## 常见问题
 
@@ -25,9 +25,7 @@
 
 ### 验证维基百科站内账户
 
-私聊机器人，发送 `/confirm Username` 。例如您的维基百科用户名为 `I love Wikipedia` ，则要发送 `/confirm I love Wikipedia` 。注意，不要包含 `User:` 前缀。
-
-机器人会检查您提供的用户名是否注册超过 7 日，并编辑 50 次以上，您需要在至少一个维基媒体计划中达到这个标准。若通过检查，之后按机器人会提供一串字符并要求您在一次编辑中将这串字符填入编辑摘要，以确认您对维基百科账户的控制权，完成后按下确认按钮。您需要在发送 `/confirm` 指令的三分钟内完成编辑，而按下按钮则无时间限制。
+私聊机器人，发送 `/confirm`。机器人会给您一个链接以完成[ OAuth 认证](https://www.mediawiki.org/wiki/Help:OAuth/zh)。然后机器人会检查您提供的用户名是否注册超过 7 日，并编辑 50 次以上，您需要在至少一个维基媒体计划中达到这个标准。
 
 ### 解除与维基百科账户的关联
 
@@ -53,10 +51,13 @@
 
 - 如何启用机器人？
     - 用 `requirements.txt` 安装依赖模块
-    - 将 `config_example.json` 中的 `token` 换成您自己机器人的 token，`proxy` 按实际需要设置；修改 `group` 和 `log_channel` 为需要验证的群组和验证日志频道的 ID；按需要修改主站点域名 `main_site`（验证时会让用户编辑他们在这个站点上的用户页）
+    - 在 [Toolforge](https://wikitech.wikimedia.org/wiki/Portal:Toolforge) 新建工具，运行[这个仓库](https://github.com/The-Earth/Telegram-MediaWiki-Confirm-Bot-OAuth)的代码。
+    - 将 `config_example.json` 中的 `token` 换成您自己机器人的 token，`proxy` 按实际需要设置；修改 `group` 和 `log_channel` 为需要验证的群组和验证日志频道的 ID；按需要修改主站点域名 `main_site`（会影响一些链接）；修改 `oauth_query_key` 与[您的 OAuth](https://github.com/The-Earth/Telegram-MediaWiki-Confirm-Bot-OAuth) 上同名的配置相同。
     - 把修改好的 `config_example.json` 的内容保存到 `config.json`
     - 运行 `main.py`
+- OAuth 的部分在哪里？
+  - [这里](https://github.com/The-Earth/Telegram-MediaWiki-Confirm-Bot-OAuth)。这部分代码在 Toolforge 运行。
 - 是否只能用于验证维基媒体计划？
-    - 不是。将 `config_example.json` 中 `main_site` 改为您的主维基站点域名，机器人所检查的全域账户也会相应地变成那个维基站点所属的维基农场。例如改成任何一个 Miraheze 旗下的维基站点，那么就会检查 Miraheze 账户。
+    - 不是。但与之相关的 OAuth 需由上一个问题中提到的代码支持。`non_oauth`和`single_wiki`分支则无需额外代码。
 - 是否可以仅检查指定的几个维基，而非全域的所有站点？
-    - 仅修改 config 不可以。但只需小小地修改 `main.py` 中的一处即可达到这个目的，config 中也预留了这个配置，聪明的您一定能做到的。
+    - 仅修改 config 不可以。但只需小小地修改 `main.py` 中的一处即可达到这个目的，config 中也预留了这个配置。
