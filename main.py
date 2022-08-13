@@ -6,6 +6,7 @@ from calendar import timegm
 import catbot
 import mwclient
 from catbot.util import html_refer
+import requests
 
 from ac import Ac
 
@@ -56,6 +57,33 @@ def lift_restriction_trial(entry: Ac, alert_chat=0):
         pass
 
 
+def check_eligibility(query: catbot.CallbackQuery, mw_username: str) -> bool:
+    bot.send_message(query.msg.chat.id, text=config['messages']['confirm_checking'])
+    global_user_info_query = site.api(**{
+        "action": "query",
+        "format": "json",
+        "meta": "globaluserinfo",
+        "utf8": 1,
+        "formatversion": "2",
+        "guiuser": mw_username,
+        "guiprop": "merged"
+    })
+
+    if 'missing' in global_user_info_query['query']['globaluserinfo'].keys():
+        bot.send_message(query.msg.chat.id, text=config['messages']['confirm_user_not_found'].format(
+            name=mw_username))
+        return False
+
+    global_user_info = global_user_info_query['query']['globaluserinfo']['merged']
+    for local_user in global_user_info:
+        if local_user['editcount'] >= 50 and time.time() - \
+                timegm(time.strptime(local_user['registration'], '%Y-%m-%dT%H:%M:%SZ')) > 7 * 86400:
+            return True
+    else:
+        bot.send_message(query.msg.chat.id, text=config['messages']['confirm_ineligible'])
+        return False
+
+
 def start_cri(msg: catbot.Message) -> bool:
     return bot.detect_command('/start', msg) and msg.chat.type == 'private'
 
@@ -77,38 +105,6 @@ def confirm_cri(msg: catbot.Message) -> bool:
 
 
 def confirm(msg: catbot.Message):
-    user_input_token = msg.text.split()
-    if len(user_input_token) == 1:
-        bot.send_message(msg.chat.id, text=config['messages']['confirm_prompt'], parse_mode='HTML')
-        return
-
-    mw_username = '_'.join(user_input_token[1:])
-    mw_username = mw_username[0].upper() + mw_username[1:]
-    bot.send_message(msg.chat.id, text=config['messages']['confirm_checking'])
-    global_user_info_query = site.api(**{
-        "action": "query",
-        "format": "json",
-        "meta": "globaluserinfo",
-        "utf8": 1,
-        "formatversion": "2",
-        "guiuser": mw_username,
-        "guiprop": "merged"
-    })
-
-    if 'missing' in global_user_info_query['query']['globaluserinfo'].keys():
-        bot.send_message(msg.chat.id, text=config['messages']['confirm_user_not_found'].format(
-            name=mw_username))
-        return
-
-    global_user_info = global_user_info_query['query']['globaluserinfo']['merged']
-    for local_user in global_user_info:
-        if local_user['editcount'] >= 50 and \
-                time.time() - timegm(time.strptime(local_user['registration'], '%Y-%m-%dT%H:%M:%SZ')) > 7 * 86400:
-            break
-    else:
-        bot.send_message(msg.chat.id, text=config['messages']['confirm_ineligible'])
-        return
-
     with t_lock:
         ac_list, rec = bot.secure_record_fetch('ac', list)
 
@@ -130,27 +126,22 @@ def confirm(msg: catbot.Message):
                 else:
                     entry_index = i
 
-            elif entry.mw_username == mw_username and (entry.confirmed or entry.confirming):
-                bot.send_message(msg.chat.id, text=config['messages']['confirm_conflict'])
-                return
         else:
             if entry_index == -1:
                 entry = Ac(msg.from_.id)
                 ac_list.append(entry.to_dict())
             entry = Ac.from_dict(ac_list[entry_index])
             entry.confirming = True
-            entry.mw_username = mw_username
             ac_list[entry_index] = entry.to_dict()
 
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    h = hash(time.time())
-    button = catbot.InlineKeyboardButton(config['messages']['confirm_button'], callback_data=f'confirm_{h}')
+    button = catbot.InlineKeyboardButton(config['messages']['confirm_button'], callback_data=f'confirm')
     keyboard = catbot.InlineKeyboard([[button]])
-    bot.send_message(msg.chat.id, text=config['messages']['confirm_wait'].format(site=config['main_site'],
-                                                                                 page=config['page_for_confirmation'],
-                                                                                 h=h),
+    bot.send_message(msg.chat.id, text=config['messages']['confirm_wait'].format(
+        link=config['oauth_auth_url'].format(telegram_id=msg.from_.id),
+    ),
                      parse_mode='HTML', disable_web_page_preview=True, reply_markup=keyboard)
 
 
@@ -159,7 +150,6 @@ def confirm_button_cri(query: catbot.CallbackQuery) -> bool:
 
 
 def confirm_button(query: catbot.CallbackQuery):
-    confirm_token = query.data.split('_')[1]
     bot.answer_callback_query(callback_query_id=query.id)
     bot.edit_message(query.msg.chat.id, query.msg.id, text=query.msg.html_formatted_text, parse_mode='HTML',
                      disable_web_page_preview=True)
@@ -181,24 +171,21 @@ def confirm_button(query: catbot.CallbackQuery):
             return
 
         try:
-            revs = site.Pages[config['page_for_confirmation']].revisions()
-            while True:
-                rev = next(revs)
-                if 0 <= timegm(rev['timestamp']) - query.msg.date <= 180:
-                    if rev['user'].replace(' ', '_') != entry.mw_username:
-                        continue
-                    if confirm_token not in rev['comment']:
-                        continue
-                    entry.confirmed = True
-                    entry.confirming = False
-                    entry.confirmed_time = time.time()
-                    break
-                else:
-                    entry.confirmed = False
-                    entry.confirming = False
-                    break
-        except StopIteration:
-            entry.confirmed = False
+            res = requests.post(config['oauth_query_url'], json={'query_key': config['oauth_query_key'],
+                                                                 'telegram_id': str(query.from_.id)})
+        except (requests.ConnectTimeout, requests.ConnectionError, requests.HTTPError):
+            eligible = False
+        else:
+            if res.status_code == 200 and res.json()['ok']:
+                mw_username = res.json()['username']
+                entry.mw_username = mw_username
+                eligible = check_eligibility(query, mw_username)
+            else:
+                eligible = False
+        finally:
+            if eligible:
+                entry.confirmed_time = time.time()
+            entry.confirmed = eligible
             entry.confirming = False
 
         ac_list[entry_index] = entry.to_dict()
@@ -367,7 +354,7 @@ def add_whitelist(msg: catbot.Message):
             reason = 'whitelisted'
     else:
         if len(user_input_token) < 2:
-            bot.send_message(msg.chat.id, text=config['messages']['general_prompt'], reply_to_message_id=msg.id)
+            bot.send_message(msg.chat.id, text=config['messages']['add_whitelist_prompt'], reply_to_message_id=msg.id)
             return
         try:
             whitelist_id = int(user_input_token[1])
