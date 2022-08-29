@@ -57,7 +57,7 @@ def lift_restriction_trial(entry: Ac, alert_chat=0):
         pass
 
 
-def check_eligibility(query: catbot.CallbackQuery, mw_id: str) -> tuple[bool, str]:
+def check_eligibility(query: catbot.CallbackQuery, mw_id: str) -> bool:
     bot.send_message(query.msg.chat.id, text=config['messages']['confirm_checking'])
     global_user_info_query = site.api(**{
         "action": "query",
@@ -69,20 +69,51 @@ def check_eligibility(query: catbot.CallbackQuery, mw_id: str) -> tuple[bool, st
         "guiprop": "merged"
     })
 
-    if 'missing' in global_user_info_query['query']['globaluserinfo'].keys():
+    if 'error' in global_user_info_query.keys():
         bot.send_message(query.msg.chat.id, text=config['messages']['confirm_user_not_found'].format(
             mw_id=mw_id))
-        return False, ''
+        return False
 
     global_user_info = global_user_info_query['query']['globaluserinfo']['merged']
-    username = global_user_info_query['query']['globaluserinfo']['name']
     for local_user in global_user_info:
         if local_user['editcount'] >= 50 and time.time() - \
                 timegm(time.strptime(local_user['registration'], '%Y-%m-%dT%H:%M:%SZ')) > 7 * 86400:
-            return True, username
+            return True
     else:
         bot.send_message(query.msg.chat.id, text=config['messages']['confirm_ineligible'])
-        return False, username
+        return False
+
+
+def get_mw_username(mw_id: str) -> str | None:
+    global_user_info_query = site.api(**{
+        "action": "query",
+        "format": "json",
+        "meta": "globaluserinfo",
+        "utf8": 1,
+        "formatversion": "2",
+        "guiid": mw_id,
+    })
+
+    if 'error' in global_user_info_query.keys():
+        return None
+
+    return global_user_info_query['query']['globaluserinfo']['name']
+
+
+def get_mw_id(mw_username: str) -> str | None:
+    global_user_info_query = site.api(**{
+        "action": "query",
+        "format": "json",
+        "meta": "globaluserinfo",
+        "utf8": 1,
+        "formatversion": "2",
+        "guiuser": mw_username,
+    })
+
+    if 'missing' in global_user_info_query['query']['globaluserinfo'].keys():
+        return None
+
+    return str(global_user_info_query['query']['globaluserinfo']['id'])
 
 
 def start_cri(msg: catbot.Message) -> bool:
@@ -114,9 +145,9 @@ def confirm(msg: catbot.Message):
             entry = Ac.from_dict(ac_list[i])
             if entry.telegram_id == msg.from_.id:
                 if entry.confirmed:
-                    bot.send_message(msg.chat.id,
-                                     text=config['messages']['confirm_already'].format(
-                                         wp_name=entry.mw_username))
+                    bot.send_message(msg.chat.id, text=config['messages']['confirm_already'].format(
+                        wp_name=get_mw_username(entry.mw_id)
+                    ))
                     return
                 elif entry.confirming:
                     bot.send_message(msg.chat.id, text=config['messages']['confirm_confirming'])
@@ -162,7 +193,8 @@ def confirm_button(query: catbot.CallbackQuery):
                 continue
             if entry.confirmed:
                 bot.send_message(query.msg.chat.id, text=config['messages']['confirm_already'].format(
-                    wp_name=entry.mw_username))
+                    wp_name=get_mw_username(entry.mw_id)
+                ))
                 return
             if entry.confirming:
                 entry_index = i
@@ -178,8 +210,8 @@ def confirm_button(query: catbot.CallbackQuery):
             entry.confirmed = False
         else:
             if res.status_code == 200 and res.json()['ok']:
-                mw_id = res.json()['mw_id']
-                entry.confirmed, entry.mw_username = check_eligibility(query, mw_id)
+                entry.mw_id = res.json()['mw_id']
+                entry.confirmed = check_eligibility(query, entry.mw_id)
             else:
                 entry.confirmed = False
         finally:
@@ -194,8 +226,11 @@ def confirm_button(query: catbot.CallbackQuery):
     if entry.confirmed:
         bot.send_message(query.msg.chat.id, text=config['messages']['confirm_complete'])
         lift_restriction_trial(entry)
-        log(config['messages']['confirm_log'].format(tg_id=entry.telegram_id, wp_id=entry.mw_username,
-                                                     site=config['main_site']))
+        log(config['messages']['confirm_log'].format(
+            tg_id=entry.telegram_id,
+            wp_id=get_mw_username(entry.mw_id),
+            site=config['main_site']
+        ))
     else:
         bot.send_message(query.msg.chat.id, text=config['messages']['confirm_failed'])
 
@@ -249,7 +284,7 @@ def deconfirm_button(query: catbot.CallbackQuery):
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    log(config['messages']['deconfirm_log'].format(tg_id=entry.telegram_id, wp_id=entry.mw_username,
+    log(config['messages']['deconfirm_log'].format(tg_id=entry.telegram_id, wp_id=get_mw_username(entry.mw_id),
                                                    site=config['main_site']))
     bot.send_message(query.msg.chat.id, text=config['messages']['deconfirm_succ'])
 
@@ -458,26 +493,31 @@ def whois(msg: catbot.Message):
     user_input_token = msg.text.split()
     if msg.reply:
         whois_id = msg.reply_to_message.from_.id
-        whois_wm_name = ''
+        whois_mw_id = None
     else:
         if len(user_input_token) == 1:
             bot.send_message(config['group'], text=config['messages']['whois_prompt'], reply_to_message_id=msg.id)
             return
-        else:
-            try:
-                whois_id = int(' '.join(user_input_token[1:]))
-                whois_wm_name = ''
-            except ValueError:
-                whois_id = 0
-                whois_wm_name = '_'.join(user_input_token[1:])
-                whois_wm_name = whois_wm_name[0].upper() + whois_wm_name[1:]
+
+        try:
+            whois_id = int(' '.join(user_input_token[1:]))
+            whois_mw_id = None
+        except ValueError:
+            whois_id = 0
+            whois_wm_name = '_'.join(user_input_token[1:])
+            whois_wm_name = whois_wm_name[0].upper() + whois_wm_name[1:]
+            whois_mw_id = get_mw_id(whois_wm_name)
+            if whois_mw_id is None:
+                bot.send_message(config['group'], text=config['messages']['whois_not_found'],
+                                 reply_to_message_id=msg.id)
+                return
 
     with t_lock:
         ac_list, rec = bot.secure_record_fetch('ac', list)
         for i in range(len(ac_list)):
             entry = Ac.from_dict(ac_list[i])
-            if (entry.confirmed or entry.whitelist_reason) and (entry.telegram_id == whois_id or (
-                    entry.mw_username == whois_wm_name and whois_wm_name != '')):
+            if (entry.confirmed or entry.whitelist_reason) and (entry.telegram_id == whois_id or
+                                                                entry.mw_id == whois_mw_id):
                 break
         else:
             bot.send_message(config['group'], text=config['messages']['whois_not_found'], reply_to_message_id=msg.id)
@@ -491,8 +531,12 @@ def whois(msg: catbot.Message):
     resp_text = f'{name} ({entry.telegram_id})\n'
 
     if entry.confirmed:
+        wp_username = get_mw_username(entry.mw_id)
+        if wp_username is None:
+            bot.send_message(config['group'], text=config['messages']['whois_not_found'], reply_to_message_id=msg.id)
+            return
         resp_text += config['messages']['whois_has_mw'].format(
-            wp_id=entry.mw_username,
+            wp_id=html_refer(wp_username),
             ctime=time.strftime('%Y-%m-%d %H:%M', time.gmtime(entry.confirmed_time)),
             site=config['main_site']
         )

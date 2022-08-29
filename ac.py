@@ -3,7 +3,7 @@ class Ac:
         self.confirmed = False
         self.confirming = False
         self.telegram_id: int = telegram_id
-        self.mw_username: str = ''
+        self.mw_id: str = ''
         self.confirmed_time: float = 0
         self.restricted_until: int = 0
         self.whitelist_reason: str = ''
@@ -17,7 +17,7 @@ class Ac:
         obj = cls(data['telegram_id'])
         obj.confirmed = data['confirmed']
         obj.confirming = data['confirming']
-        obj.mw_username = data['mw_username']
+        obj.mw_id = data['mw_id']
         obj.confirmed_time = data['confirmed_time']
         obj.restricted_until = data['restricted_until']
         obj.whitelist_reason = data['whitelist_reason']
