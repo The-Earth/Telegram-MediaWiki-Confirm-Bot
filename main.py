@@ -2,6 +2,7 @@ import json
 import threading
 import time
 from calendar import timegm
+from typing import Union
 
 import catbot
 import mwclient
@@ -84,7 +85,7 @@ def check_eligibility(query: catbot.CallbackQuery, mw_id: str) -> bool:
         return False
 
 
-def get_mw_username(mw_id: str) -> str | None:
+def get_mw_username(mw_id: str) -> Union[str, None]:
     global_user_info_query = site.api(**{
         "action": "query",
         "format": "json",
@@ -100,7 +101,7 @@ def get_mw_username(mw_id: str) -> str | None:
     return global_user_info_query['query']['globaluserinfo']['name']
 
 
-def get_mw_id(mw_username: str) -> str | None:
+def get_mw_id(mw_username: str) -> Union[str, None]:
     global_user_info_query = site.api(**{
         "action": "query",
         "format": "json",
