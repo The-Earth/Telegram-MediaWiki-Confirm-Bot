@@ -85,7 +85,7 @@ def check_eligibility(query: catbot.CallbackQuery, mw_id: str) -> bool:
         return False
 
 
-def get_mw_username(mw_id: str) -> Union[str, None]:
+def get_mw_username(mw_id: int) -> Union[str, None]:
     global_user_info_query = site.api(**{
         "action": "query",
         "format": "json",
@@ -101,7 +101,7 @@ def get_mw_username(mw_id: str) -> Union[str, None]:
     return global_user_info_query['query']['globaluserinfo']['name']
 
 
-def get_mw_id(mw_username: str) -> Union[str, None]:
+def get_mw_id(mw_username: str) -> Union[int, None]:
     global_user_info_query = site.api(**{
         "action": "query",
         "format": "json",
@@ -114,7 +114,7 @@ def get_mw_id(mw_username: str) -> Union[str, None]:
     if 'missing' in global_user_info_query['query']['globaluserinfo'].keys():
         return None
 
-    return str(global_user_info_query['query']['globaluserinfo']['id'])
+    return global_user_info_query['query']['globaluserinfo']['id']
 
 
 def start_cri(msg: catbot.Message) -> bool:
@@ -229,7 +229,7 @@ def confirm_button(query: catbot.CallbackQuery):
         lift_restriction_trial(entry)
         log(config['messages']['confirm_log'].format(
             tg_id=entry.telegram_id,
-            wp_id=get_mw_username(entry.mw_id),
+            wp_name=get_mw_username(entry.mw_id),
             site=config['main_site']
         ))
     else:
@@ -285,7 +285,7 @@ def deconfirm_button(query: catbot.CallbackQuery):
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    log(config['messages']['deconfirm_log'].format(tg_id=entry.telegram_id, wp_id=get_mw_username(entry.mw_id),
+    log(config['messages']['deconfirm_log'].format(tg_id=entry.telegram_id, wp_name=get_mw_username(entry.mw_id),
                                                    site=config['main_site']))
     bot.send_message(query.msg.chat.id, text=config['messages']['deconfirm_succ'])
 
