@@ -58,7 +58,7 @@ def lift_restriction_trial(entry: Ac, alert_chat=0):
         pass
 
 
-def check_eligibility(query: catbot.CallbackQuery, mw_id: str) -> bool:
+def check_eligibility(query: catbot.CallbackQuery, mw_id: int) -> bool:
     bot.send_message(query.msg.chat.id, text=config['messages']['confirm_checking'])
     global_user_info_query = site.api(**{
         "action": "query",
@@ -529,7 +529,10 @@ def whois(msg: catbot.Message):
         name = html_refer(whois_member.name)
     except catbot.UserNotFoundError:
         name = config['messages']['whois_tg_name_unavailable']
-    resp_text = f'{name} ({entry.telegram_id})\n'
+    resp_text = config['messages']['whois_head'].format(
+        name=name,
+        tg_id=entry.telegram_id
+    )
 
     if entry.confirmed:
         wp_username = get_mw_username(entry.mw_id)
