@@ -692,7 +692,7 @@ if __name__ == '__main__':
     bot.add_msg_task(whois_cri, whois)
     bot.add_msg_task(refuse_cri, refuse)
     bot.add_msg_task(accept_cri, accept)
-    bot.add_msg_task(block_unconfirmed_cri, block_unconfirmed)
+    # bot.add_msg_task(block_unconfirmed_cri, block_unconfirmed)
 
     while True:
         try:
