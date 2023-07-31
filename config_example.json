@@ -12,6 +12,7 @@
   "oauth_query_url": "https://telegram-auth-bot.toolforge.org/query",
   "oauth_query_key": "AAAAAAAAAAAAAA",
   "wiki_list": ["zhwiki"],
+  "blacklist": [],
   "messages": {
     "start": "/confirm 验证维基媒体账户\n/deconfirm 解除与维基媒体账户的关联\n/policy 查看机器人说明",
     "policy": "入群门槛：在任意一个维基媒体计划网站注册超过 7 日且编辑 50 次以上。<b>不要为了入群而用快速编辑积累编辑次数，您会因此遭到封禁而无法再编辑。</b>\n\n若要开始验证，请发送 /confirm 并按提示操作。机器人借由OAuth确认您的身份，并会检查您是否达到入群门槛。验证账户后，您就可以在群组中发言。您可以随时解除与站内账号的关联，若如此做，则机器人也会禁止您在群里发言。\n\n机器人在成功验证或解除关联后，会在一个日志频道记录这些操作。在群组中，可以通过指令查看其他用户对应的维基媒体用户名。\n\n机器人会记录的信息为：您的 Telegram 账户 1） 是否完成验证，2）是否正在验证中，3）Telegram ID，4）对应的维基媒体账号，5），对应的维基媒体全域ID，6）完成验证的时间，7）上一次被群管禁言的期限",

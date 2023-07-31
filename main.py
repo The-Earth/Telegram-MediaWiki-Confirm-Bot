@@ -3,6 +3,7 @@ import threading
 import time
 from calendar import timegm
 from typing import Union
+import re
 
 import catbot
 import mwclient
@@ -115,6 +116,14 @@ def get_mw_id(mw_username: str) -> Union[int, None]:
         return None
 
     return global_user_info_query['query']['globaluserinfo']['id']
+
+
+def match_blacklist(token: str) -> bool:
+    for reg in config['blacklist']:
+        if re.search(reg, token):
+            return True
+
+    return False
 
 
 def start_cri(msg: catbot.Message) -> bool:
@@ -331,6 +340,9 @@ def new_member(msg: catbot.ChatMemberUpdate):
 
     try:
         bot.silence_chat_member(config['group'], msg.new_chat_member.id)
+        if match_blacklist(msg.new_chat_member.name):
+            bot.kick_chat_member(config['group'], msg.new_chat_member.id)
+            return
     except catbot.InsufficientRightError:
         bot.send_message(config['group'], text=config['messages']['insufficient_right'])
         return
