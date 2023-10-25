@@ -7,7 +7,7 @@ import re
 
 import catbot
 import mwclient
-from catbot.util import html_refer
+from catbot.util import html_escape
 import requests
 
 from ac import Ac
@@ -373,7 +373,7 @@ def new_member(msg: catbot.ChatMemberUpdate):
             cur = bot.send_message(config['group'],
                                    text=config['messages']['new_member_hint'].format(
                                        tg_id=msg.new_chat_member.id,
-                                       tg_name=html_refer(msg.new_chat_member.name)),
+                                       tg_name=html_escape(msg.new_chat_member.name)),
                                    parse_mode='HTML')
             rec['last_welcome'] = cur.id
             json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
@@ -429,7 +429,7 @@ def add_whitelist(msg: catbot.Message):
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    log(config['messages']['add_whitelist_log'].format(adder=html_refer(adder.name), tg_id=whitelist_id, reason=reason))
+    log(config['messages']['add_whitelist_log'].format(adder=html_escape(adder.name), tg_id=whitelist_id, reason=reason))
     bot.send_message(msg.chat.id, text=config['messages']['add_whitelist_succ'].format(tg_id=whitelist_id),
                      reply_to_message_id=msg.id)
 
@@ -491,7 +491,7 @@ def remove_whitelist(msg: catbot.Message):
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    log(config['messages']['remove_whitelist_log'].format(remover=html_refer(remover.name), tg_id=whitelist_id))
+    log(config['messages']['remove_whitelist_log'].format(remover=html_escape(remover.name), tg_id=whitelist_id))
     bot.send_message(msg.chat.id, text=config['messages']['remove_whitelist_succ'].format(tg_id=whitelist_id),
                      reply_to_message_id=msg.id)
 
@@ -538,7 +538,7 @@ def whois(msg: catbot.Message):
 
     try:
         whois_member = bot.get_chat_member(config['group'], entry.telegram_id)
-        name = html_refer(whois_member.name)
+        name = html_escape(whois_member.name)
     except catbot.UserNotFoundError:
         name = config['messages']['whois_tg_name_unavailable']
     resp_text = config['messages']['whois_head'].format(
@@ -552,7 +552,7 @@ def whois(msg: catbot.Message):
             bot.send_message(config['group'], text=config['messages']['whois_not_found'], reply_to_message_id=msg.id)
             return
         resp_text += config['messages']['whois_has_mw'].format(
-            wp_id=html_refer(wp_username),
+            wp_id=html_escape(wp_username),
             ctime=time.strftime('%Y-%m-%d %H:%M', time.gmtime(entry.confirmed_time)),
             site=config['main_site']
         )
@@ -623,7 +623,7 @@ def refuse(msg: catbot.Message):
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    log(config['messages']['refuse_log'].format(tg_id=refused_id, refuser=html_refer(operator.name)))
+    log(config['messages']['refuse_log'].format(tg_id=refused_id, refuser=html_escape(operator.name)))
 
     silence_trial(entry)
 
@@ -666,7 +666,7 @@ def accept(msg: catbot.Message):
         rec['ac'] = ac_list
         json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    log(config['messages']['accept_log'].format(tg_id=accepted_id, acceptor=html_refer(operator.name)))
+    log(config['messages']['accept_log'].format(tg_id=accepted_id, acceptor=html_escape(operator.name)))
 
 
 def block_unconfirmed_cri(msg: catbot.Message) -> bool:
