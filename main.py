@@ -13,13 +13,13 @@ import requests
 from ac import Ac
 
 config = json.load(open('config.json', 'r', encoding='utf-8'))
-bot = catbot.Bot(config)
+bot = catbot.Bot(config_path='config.json')
 t_lock = threading.Lock()
-site = mwclient.Site(config['main_site'], reqs=bot.proxy_kw)
+site = mwclient.Site(bot.config['main_site'], reqs=bot.proxy_kw)
 
 
 def log(text):
-    bot.send_message(config['log_channel'], text=text, parse_mode='HTML', disable_web_page_preview=True)
+    bot.send_message(bot.config['log_channel'], text=text, parse_mode='HTML', disable_web_page_preview=True)
 
 
 def silence_trial(entry: Ac, alert_chat=0):
@@ -31,7 +31,7 @@ def silence_trial(entry: Ac, alert_chat=0):
             bot.silence_chat_member(config['group'], entry.telegram_id)
         except catbot.InsufficientRightError:
             if alert_chat:
-                bot.send_message(alert_chat, text=config['messages']['insufficient_right'])
+                bot.send_message(alert_chat, text=bot.config['messages']['insufficient_right'])
         except catbot.RestrictAdminError:
             pass
         except catbot.UserNotFoundError:
@@ -48,19 +48,19 @@ def lift_restriction_trial(entry: Ac, alert_chat=0):
         else:
             bot.silence_chat_member(config['group'], entry.telegram_id, until=entry.restricted_until)
             bot.send_message(alert_chat,
-                             text=config['messages']['restore_silence'].format(tg_id=entry.telegram_id),
+                             text=bot.config['messages']['restore_silence'].format(tg_id=ac_record.telegram_id),
                              parse_mode='HTML')
     except catbot.RestrictAdminError:
         pass
     except catbot.InsufficientRightError:
         if alert_chat:
-            bot.send_message(alert_chat, text=config['messages']['insufficient_right'])
+            bot.send_message(alert_chat, text=bot.config['messages']['insufficient_right'])
     except catbot.UserNotFoundError:
         pass
 
 
 def check_eligibility(query: catbot.CallbackQuery, mw_id: int) -> bool:
-    bot.send_message(query.msg.chat.id, text=config['messages']['confirm_checking'])
+    bot.send_message(query.msg.chat.id, text=bot.config['messages']['confirm_checking'])
     global_user_info_query = site.api(**{
         "action": "query",
         "format": "json",
@@ -72,7 +72,7 @@ def check_eligibility(query: catbot.CallbackQuery, mw_id: int) -> bool:
     })
 
     if 'error' in global_user_info_query.keys():
-        bot.send_message(query.msg.chat.id, text=config['messages']['confirm_user_not_found'].format(
+        bot.send_message(query.msg.chat.id, text=bot.config['messages']['confirm_user_not_found'].format(
             mw_id=mw_id))
         return False
 
@@ -82,7 +82,7 @@ def check_eligibility(query: catbot.CallbackQuery, mw_id: int) -> bool:
                 timegm(time.strptime(local_user['registration'], '%Y-%m-%dT%H:%M:%SZ')) > 7 * 86400:
             return True
     else:
-        bot.send_message(query.msg.chat.id, text=config['messages']['confirm_ineligible'])
+        bot.send_message(query.msg.chat.id, text=bot.config['messages']['confirm_ineligible'])
         return False
 
 
@@ -119,7 +119,7 @@ def get_mw_id(mw_username: str) -> Union[int, None]:
 
 
 def match_blacklist(token: str) -> bool:
-    for reg in config['blacklist']:
+    for reg in bot.config['blacklist']:
         if re.search(reg, token):
             return True
 
@@ -131,7 +131,7 @@ def start_cri(msg: catbot.Message) -> bool:
 
 
 def start(msg: catbot.Message):
-    bot.send_message(msg.chat.id, text=config['messages']['start'])
+    bot.send_message(msg.chat.id, text=bot.config['messages']['start'])
 
 
 def policy_cri(msg: catbot.Message) -> bool:
@@ -139,7 +139,7 @@ def policy_cri(msg: catbot.Message) -> bool:
 
 
 def policy(msg: catbot.Message):
-    bot.send_message(msg.chat.id, text=config['messages']['policy'], parse_mode='HTML')
+    bot.send_message(msg.chat.id, text=bot.config['messages']['policy'], parse_mode='HTML')
 
 
 def confirm_cri(msg: catbot.Message) -> bool:
@@ -155,15 +155,15 @@ def confirm(msg: catbot.Message):
             entry = Ac.from_dict(ac_list[i])
             if entry.telegram_id == msg.from_.id:
                 if entry.confirmed:
-                    bot.send_message(msg.chat.id, text=config['messages']['confirm_already'].format(
                         wp_name=get_mw_username(entry.mw_id)
+                    bot.send_message(msg.chat.id, text=bot.config['messages']['confirm_already'].format(
                     ))
                     return
                 elif entry.confirming:
-                    bot.send_message(msg.chat.id, text=config['messages']['confirm_confirming'])
+                    bot.send_message(msg.chat.id, text=bot.config['messages']['confirm_confirming'])
                     return
                 elif entry.refused:
-                    bot.send_message(msg.chat.id, text=config['messages']['confirm_ineligible'])
+                    bot.send_message(msg.chat.id, text=bot.config['messages']['confirm_ineligible'])
                     return
                 else:
                     entry_index = i
@@ -177,14 +177,17 @@ def confirm(msg: catbot.Message):
             ac_list[entry_index] = entry.to_dict()
 
         rec['ac'] = ac_list
-        json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+        json.dump(rec, open(bot.config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    button = catbot.InlineKeyboardButton(config['messages']['confirm_button'], callback_data=f'confirm')
+    button = catbot.InlineKeyboardButton(bot.config['messages']['confirm_button'], callback_data=f'confirm')
     keyboard = catbot.InlineKeyboard([[button]])
-    bot.send_message(msg.chat.id, text=config['messages']['confirm_wait'].format(
-        link=config['oauth_auth_url'].format(telegram_id=msg.from_.id),
-    ),
-                     parse_mode='HTML', disable_web_page_preview=True, reply_markup=keyboard)
+    bot.send_message(
+        msg.chat.id,
+        text=bot.config['messages']['confirm_wait'].format(link=bot.config['oauth_auth_url'].format(telegram_id=msg.from_.id),),
+        parse_mode='HTML',
+        disable_web_page_preview=True,
+        reply_markup=keyboard
+    )
 
 
 def confirm_button_cri(query: catbot.CallbackQuery) -> bool:
@@ -202,20 +205,25 @@ def confirm_button(query: catbot.CallbackQuery):
             if entry.telegram_id != query.from_.id:
                 continue
             if entry.confirmed:
-                bot.send_message(query.msg.chat.id, text=config['messages']['confirm_already'].format(
                     wp_name=get_mw_username(entry.mw_id)
+                bot.send_message(query.msg.chat.id, text=bot.config['messages']['confirm_already'].format(
                 ))
                 return
             if entry.confirming:
                 entry_index = i
                 break
         else:
-            bot.send_message(query.msg.chat.id, text=config['messages']['confirm_session_lost'])
+            bot.send_message(query.msg.chat.id, text=bot.config['messages']['confirm_session_lost'])
             return
 
         try:
-            res = requests.post(config['oauth_query_url'], json={'query_key': config['oauth_query_key'],
-                                                                 'telegram_id': str(query.from_.id)})
+            res = requests.post(
+                bot.config['oauth_query_url'],
+                json={
+                    'query_key': bot.config['oauth_query_key'],
+                    'telegram_id': str(query.from_.id)
+                }
+            )
         except (requests.ConnectTimeout, requests.ConnectionError, requests.HTTPError):
             entry.confirmed = False
         else:
@@ -231,18 +239,18 @@ def confirm_button(query: catbot.CallbackQuery):
 
         ac_list[entry_index] = entry.to_dict()
         rec['ac'] = ac_list
-        json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+        json.dump(rec, open(bot.config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
     if entry.confirmed:
-        bot.send_message(query.msg.chat.id, text=config['messages']['confirm_complete'])
         lift_restriction_trial(entry)
-        log(config['messages']['confirm_log'].format(
             tg_id=entry.telegram_id,
             wp_name=get_mw_username(entry.mw_id),
-            site=config['main_site']
+        bot.send_message(query.msg.chat.id, text=bot.config['messages']['confirm_complete'])
+        log(bot.config['messages']['confirm_log'].format(
+            site=bot.config['main_site']
         ))
     else:
-        bot.send_message(query.msg.chat.id, text=config['messages']['confirm_failed'])
+        bot.send_message(query.msg.chat.id, text=bot.config['messages']['confirm_failed'])
 
 
 def deconfirm_cri(msg: catbot.Message) -> bool:
@@ -250,9 +258,9 @@ def deconfirm_cri(msg: catbot.Message) -> bool:
 
 
 def deconfirm(msg: catbot.Message):
-    button = catbot.InlineKeyboardButton(config['messages']['deconfirm_button'], callback_data='deconfirm')
+    button = catbot.InlineKeyboardButton(bot.config['messages']['deconfirm_button'], callback_data='deconfirm')
     keyboard = catbot.InlineKeyboard([[button]])
-    bot.send_message(msg.chat.id, text=config['messages']['deconfirm_prompt'], reply_markup=keyboard)
+    bot.send_message(msg.chat.id, text=bot.config['messages']['deconfirm_prompt'], reply_markup=keyboard)
 
 
 def deconfirm_button_cri(query: catbot.CallbackQuery) -> bool:
@@ -262,7 +270,7 @@ def deconfirm_button_cri(query: catbot.CallbackQuery) -> bool:
 def deconfirm_button(query: catbot.CallbackQuery):
     bot.answer_callback_query(query.id)
     try:
-        user_chat = bot.get_chat_member(config['group'], query.from_.id)
+        user_chat = bot.get_chat_member(bot.config['group'], query.from_.id)
     except catbot.UserNotFoundError:
         restricted_until = 0
     else:
@@ -285,14 +293,14 @@ def deconfirm_button(query: catbot.CallbackQuery):
                         entry.restricted_until = restricted_until
                     break
                 else:
-                    bot.send_message(query.msg.chat.id, text=config['messages']['deconfirm_not_confirmed'])
+                    bot.send_message(query.msg.chat.id, text=bot.config['messages']['deconfirm_not_confirmed'])
                     return
         else:
-            bot.send_message(query.msg.chat.id, text=config['messages']['deconfirm_not_confirmed'])
+            bot.send_message(query.msg.chat.id, text=bot.config['messages']['deconfirm_not_confirmed'])
             return
 
         rec['ac'] = ac_list
-        json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+        json.dump(rec, open(bot.config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
     log(config['messages']['deconfirm_log'].format(tg_id=entry.telegram_id, wp_name=get_mw_username(entry.mw_id),
                                                    site=config['main_site']))
@@ -302,7 +310,7 @@ def deconfirm_button(query: catbot.CallbackQuery):
 
 
 def new_member_cri(msg: catbot.ChatMemberUpdate) -> bool:
-    if not msg.chat.id == config['group']:
+    if not msg.chat.id == bot.config['group']:
         return False
     elif msg.new_chat_member.is_bot:
         return False
@@ -339,12 +347,12 @@ def new_member(msg: catbot.ChatMemberUpdate):
         restricted_until = 0
 
     try:
-        bot.silence_chat_member(config['group'], msg.new_chat_member.id)
+        bot.silence_chat_member(bot.config['group'], msg.new_chat_member.id)
         if match_blacklist(msg.new_chat_member.name):
-            bot.kick_chat_member(config['group'], msg.new_chat_member.id)
+            bot.kick_chat_member(bot.config['group'], msg.new_chat_member.id)
             return
     except catbot.InsufficientRightError:
-        bot.send_message(config['group'], text=config['messages']['insufficient_right'])
+        bot.send_message(bot.config['group'], text=bot.config['messages']['insufficient_right'])
         return
 
     with t_lock:
@@ -363,22 +371,22 @@ def new_member(msg: catbot.ChatMemberUpdate):
             entry.restricted_until = restricted_until
         ac_list[user_index] = entry.to_dict()
         rec['ac'] = ac_list
-        json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+        json.dump(rec, open(bot.config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
     if entry.confirmed or entry.whitelist_reason:
         lift_restriction_trial(entry, config['group'])
     else:
         with t_lock:
             last_id, rec = bot.secure_record_fetch('last_welcome', int)
-            cur = bot.send_message(config['group'],
-                                   text=config['messages']['new_member_hint'].format(
+            cur = bot.send_message(bot.config['group'],
+                                   text=bot.config['messages']['new_member_hint'].format(
                                        tg_id=msg.new_chat_member.id,
                                        tg_name=html_escape(msg.new_chat_member.name)),
                                    parse_mode='HTML')
             rec['last_welcome'] = cur.id
-            json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+            json.dump(rec, open(bot.config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
             try:
-                bot.delete_message(config['group'], last_id)
+                bot.delete_message(bot.config['group'], last_id)
             except catbot.DeleteMessageError:
                 pass
 
@@ -388,7 +396,7 @@ def add_whitelist_cri(msg: catbot.Message) -> bool:
 
 
 def add_whitelist(msg: catbot.Message):
-    adder = bot.get_chat_member(config['group'], msg.from_.id)
+    adder = bot.get_chat_member(bot.config['group'], msg.from_.id)
     if not (adder.status == 'creator' or adder.status == 'administrator'):
         return
 
@@ -401,12 +409,12 @@ def add_whitelist(msg: catbot.Message):
             reason = 'whitelisted'
     else:
         if len(user_input_token) < 2:
-            bot.send_message(msg.chat.id, text=config['messages']['add_whitelist_prompt'], reply_to_message_id=msg.id)
+            bot.send_message(msg.chat.id, text=bot.config['messages']['add_whitelist_prompt'], reply_to_message_id=msg.id)
             return
         try:
             whitelist_id = int(user_input_token[1])
         except ValueError:
-            bot.send_message(msg.chat.id, text=config['messages']['telegram_id_error'], reply_to_message_id=msg.id)
+            bot.send_message(msg.chat.id, text=bot.config['messages']['telegram_id_error'], reply_to_message_id=msg.id)
             return
         if len(user_input_token) > 2:
             reason = ' '.join(user_input_token[2:])
@@ -427,10 +435,14 @@ def add_whitelist(msg: catbot.Message):
             ac_list.append(entry.to_dict())
 
         rec['ac'] = ac_list
-        json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+        json.dump(rec, open(bot.config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    log(config['messages']['add_whitelist_log'].format(adder=html_escape(adder.name), tg_id=whitelist_id, reason=reason))
-    bot.send_message(msg.chat.id, text=config['messages']['add_whitelist_succ'].format(tg_id=whitelist_id),
+    log(bot.config['messages']['add_whitelist_log'].format(
+        adder=html_escape(adder.name),
+        tg_id=whitelist_id,
+        reason=reason
+    ))
+    bot.send_message(msg.chat.id, text=bot.config['messages']['add_whitelist_succ'].format(tg_id=whitelist_id),
                      reply_to_message_id=msg.id)
 
     lift_restriction_trial(entry, msg.chat.id)
@@ -442,7 +454,7 @@ def remove_whitelist_cri(msg: catbot.Message) -> bool:
 
 def remove_whitelist(msg: catbot.Message):
     try:
-        remover = bot.get_chat_member(config['group'], msg.from_.id)
+        remover = bot.get_chat_member(bot.config['group'], msg.from_.id)
     except catbot.UserNotFoundError:
         return
     if not (remover.status == 'creator' or remover.status == 'administrator'):
@@ -453,16 +465,16 @@ def remove_whitelist(msg: catbot.Message):
         whitelist_id = msg.reply_to_message.from_.id
     else:
         if len(user_input_token) < 2:
-            bot.send_message(msg.chat.id, text=config['messages']['general_prompt'], reply_to_message_id=msg.id)
+            bot.send_message(msg.chat.id, text=bot.config['messages']['general_prompt'], reply_to_message_id=msg.id)
             return
         try:
             whitelist_id = int(user_input_token[1])
         except ValueError:
-            bot.send_message(msg.chat.id, text=config['messages']['telegram_id_error'], reply_to_message_id=msg.id)
+            bot.send_message(msg.chat.id, text=bot.config['messages']['telegram_id_error'], reply_to_message_id=msg.id)
             return
 
     try:
-        whitelist_user = bot.get_chat_member(config['group'], whitelist_id)
+        whitelist_user = bot.get_chat_member(bot.config['group'], whitelist_id)
     except catbot.UserNotFoundError:
         restricted_until = 0
     else:
@@ -484,22 +496,22 @@ def remove_whitelist(msg: catbot.Message):
                 ac_list[i] = entry.to_dict()
                 break
         else:
-            bot.send_message(msg.chat.id, text=config['messages']['remove_whitelist_not_found'],
+            bot.send_message(msg.chat.id, text=bot.config['messages']['remove_whitelist_not_found'],
                              reply_to_message_id=msg.id)
             return
 
         rec['ac'] = ac_list
-        json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+        json.dump(rec, open(bot.config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    log(config['messages']['remove_whitelist_log'].format(remover=html_escape(remover.name), tg_id=whitelist_id))
-    bot.send_message(msg.chat.id, text=config['messages']['remove_whitelist_succ'].format(tg_id=whitelist_id),
+    log(bot.config['messages']['remove_whitelist_log'].format(remover=html_escape(remover.name), tg_id=whitelist_id))
+    bot.send_message(msg.chat.id, text=bot.config['messages']['remove_whitelist_succ'].format(tg_id=whitelist_id),
                      reply_to_message_id=msg.id)
 
     silence_trial(entry, msg.chat.id)
 
 
 def whois_cri(msg: catbot.Message) -> bool:
-    return bot.detect_command('/whois', msg) and msg.chat.id == config['group']
+    return bot.detect_command('/whois', msg) and msg.chat.id == bot.config['group']
 
 
 def whois(msg: catbot.Message):
@@ -509,7 +521,7 @@ def whois(msg: catbot.Message):
         whois_mw_id = None
     else:
         if len(user_input_token) == 1:
-            bot.send_message(config['group'], text=config['messages']['whois_prompt'], reply_to_message_id=msg.id)
+            bot.send_message(bot.config['group'], text=bot.config['messages']['whois_prompt'], reply_to_message_id=msg.id)
             return
 
         try:
@@ -521,7 +533,7 @@ def whois(msg: catbot.Message):
             whois_wm_name = whois_wm_name[0].upper() + whois_wm_name[1:]
             whois_mw_id = get_mw_id(whois_wm_name)
             if whois_mw_id is None:
-                bot.send_message(config['group'], text=config['messages']['whois_not_found'],
+                bot.send_message(bot.config['group'], text=bot.config['messages']['whois_not_found'],
                                  reply_to_message_id=msg.id)
                 return
 
@@ -533,15 +545,15 @@ def whois(msg: catbot.Message):
                                                                 entry.mw_id == whois_mw_id):
                 break
         else:
-            bot.send_message(config['group'], text=config['messages']['whois_not_found'], reply_to_message_id=msg.id)
+            bot.send_message(bot.config['group'], text=bot.config['messages']['whois_not_found'], reply_to_message_id=msg.id)
             return
 
     try:
         whois_member = bot.get_chat_member(config['group'], entry.telegram_id)
         name = html_escape(whois_member.name)
     except catbot.UserNotFoundError:
-        name = config['messages']['whois_tg_name_unavailable']
-    resp_text = config['messages']['whois_head'].format(
+        name = bot.config['messages']['whois_tg_name_unavailable']
+    resp_text = bot.config['messages']['whois_head'].format(
         name=name,
         tg_id=entry.telegram_id
     )
@@ -549,19 +561,19 @@ def whois(msg: catbot.Message):
     if entry.confirmed:
         wp_username = get_mw_username(entry.mw_id)
         if wp_username is None:
-            bot.send_message(config['group'], text=config['messages']['whois_not_found'], reply_to_message_id=msg.id)
+            bot.send_message(bot.config['group'], text=bot.config['messages']['whois_not_found'], reply_to_message_id=msg.id)
             return
-        resp_text += config['messages']['whois_has_mw'].format(
+        resp_text += bot.config['messages']['whois_has_mw'].format(
             wp_id=html_escape(wp_username),
             ctime=time.strftime('%Y-%m-%d %H:%M', time.gmtime(entry.confirmed_time)),
-            site=config['main_site']
+            site=bot.config['main_site']
         )
     else:
-        resp_text += config['messages']['whois_no_mw']
     if entry.whitelist_reason:
-        resp_text += config['messages']['whois_whitelisted'].format(reason=entry.whitelist_reason)
+        resp_text += bot.config['messages']['whois_no_mw']
+        resp_text += bot.config['messages']['whois_whitelisted'].format(reason=ac_record.whitelist_reason)
 
-    bot.send_message(config['group'], text=resp_text, reply_to_message_id=msg.id, parse_mode='HTML',
+    bot.send_message(bot.config['group'], text=resp_text, reply_to_message_id=msg.id, parse_mode='HTML',
                      disable_web_page_preview=True)
 
 
@@ -571,7 +583,7 @@ def refuse_cri(msg: catbot.Message) -> bool:
 
 def refuse(msg: catbot.Message):
     try:
-        operator = bot.get_chat_member(config['group'], msg.from_.id)
+        operator = bot.get_chat_member(bot.config['group'], msg.from_.id)
     except catbot.UserNotFoundError:
         return
     if not (operator.status == 'creator' or operator.status == 'administrator'):
@@ -582,16 +594,16 @@ def refuse(msg: catbot.Message):
     else:
         user_input_token = msg.text.split()
         if len(user_input_token) < 2:
-            bot.send_message(msg.chat.id, text=config['messages']['general_prompt'], reply_to_message_id=msg.id)
+            bot.send_message(msg.chat.id, text=bot.config['messages']['general_prompt'], reply_to_message_id=msg.id)
             return
         try:
             refused_id = int(user_input_token[1])
         except ValueError:
-            bot.send_message(msg.chat.id, text=config['messages']['telegram_id_error'], reply_to_message_id=msg.id)
+            bot.send_message(msg.chat.id, text=bot.config['messages']['telegram_id_error'], reply_to_message_id=msg.id)
             return
 
     try:
-        refused_user = bot.get_chat_member(config['group'], refused_id)
+        refused_user = bot.get_chat_member(bot.config['group'], refused_id)
     except catbot.UserNotFoundError:
         restricted_until = 0
     else:
@@ -621,9 +633,9 @@ def refuse(msg: catbot.Message):
         entry.refused = True
         ac_list[refused_index] = entry.to_dict()
         rec['ac'] = ac_list
-        json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+        json.dump(rec, open(bot.config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    log(config['messages']['refuse_log'].format(tg_id=refused_id, refuser=html_escape(operator.name)))
+    log(bot.config['messages']['refuse_log'].format(tg_id=refused_id, refuser=html_escape(operator.name)))
 
     silence_trial(entry)
 
@@ -633,7 +645,7 @@ def accept_cri(msg: catbot.Message) -> bool:
 
 
 def accept(msg: catbot.Message):
-    operator = bot.get_chat_member(config['group'], msg.from_.id)
+    operator = bot.get_chat_member(bot.config['group'], msg.from_.id)
     if not (operator.status == 'creator' or operator.status == 'administrator'):
         return
 
@@ -642,12 +654,12 @@ def accept(msg: catbot.Message):
     else:
         user_input_token = msg.text.split()
         if len(user_input_token) < 2:
-            bot.send_message(msg.chat.id, text=config['messages']['general_prompt'], reply_to_message_id=msg.id)
+            bot.send_message(msg.chat.id, text=bot.config['messages']['general_prompt'], reply_to_message_id=msg.id)
             return
         try:
             accepted_id = int(user_input_token[1])
         except ValueError:
-            bot.send_message(msg.chat.id, text=config['messages']['telegram_id_error'], reply_to_message_id=msg.id)
+            bot.send_message(msg.chat.id, text=bot.config['messages']['telegram_id_error'], reply_to_message_id=msg.id)
             return
 
     with t_lock:
@@ -664,13 +676,13 @@ def accept(msg: catbot.Message):
         entry.refused = False
         ac_list[accepted_index] = entry.to_dict()
         rec['ac'] = ac_list
-        json.dump(rec, open(config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+        json.dump(rec, open(bot.config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
-    log(config['messages']['accept_log'].format(tg_id=accepted_id, acceptor=html_escape(operator.name)))
+    log(bot.config['messages']['accept_log'].format(tg_id=accepted_id, acceptor=html_escape(operator.name)))
 
 
 def block_unconfirmed_cri(msg: catbot.Message) -> bool:
-    return msg.chat.id == config['group']
+    return msg.chat.id == bot.config['group']
 
 
 def block_unconfirmed(msg: catbot.Message):
@@ -686,7 +698,7 @@ def block_unconfirmed(msg: catbot.Message):
                 return
 
     try:
-        bot.delete_message(config['group'], msg.id)
+        bot.delete_message(bot.config['group'], msg.id)
     except catbot.DeleteMessageError:
         print(f'[Error] Delete message {msg.id} failed.')
 
@@ -706,10 +718,5 @@ if __name__ == '__main__':
     bot.add_msg_task(accept_cri, accept)
     # bot.add_msg_task(block_unconfirmed_cri, block_unconfirmed)
 
-    while True:
-        try:
-            bot.start()
-        except KeyboardInterrupt:
-            break
-        except:
-            pass
+    with bot:
+        bot.start()
