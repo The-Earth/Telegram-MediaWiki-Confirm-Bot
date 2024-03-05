@@ -12,7 +12,6 @@ import requests
 
 from ac import Ac
 
-config = json.load(open('config.json', 'r', encoding='utf-8'))
 bot = catbot.Bot(config_path='config.json')
 t_lock = threading.Lock()
 site = mwclient.Site(bot.config['main_site'], reqs=bot.proxy_kw)
@@ -130,6 +129,7 @@ def start_cri(msg: catbot.Message) -> bool:
     return bot.detect_command('/start', msg) and msg.chat.type == 'private'
 
 
+@bot.msg_task(start_cri)
 def start(msg: catbot.Message):
     bot.send_message(msg.chat.id, text=bot.config['messages']['start'])
 
@@ -138,6 +138,7 @@ def policy_cri(msg: catbot.Message) -> bool:
     return bot.detect_command('/policy', msg)
 
 
+@bot.msg_task(policy_cri)
 def policy(msg: catbot.Message):
     bot.send_message(msg.chat.id, text=bot.config['messages']['policy'], parse_mode='HTML')
 
@@ -146,6 +147,7 @@ def confirm_cri(msg: catbot.Message) -> bool:
     return bot.detect_command('/confirm', msg) and msg.chat.type == 'private'
 
 
+@bot.msg_task(confirm_cri)
 def confirm(msg: catbot.Message):
     with t_lock:
         ac_list, rec = bot.secure_record_fetch('ac', list)
@@ -194,6 +196,7 @@ def confirm_button_cri(query: catbot.CallbackQuery) -> bool:
     return query.data.startswith('confirm') and query.msg.chat.type == 'private'
 
 
+@bot.query_task(confirm_button_cri)
 def confirm_button(query: catbot.CallbackQuery):
     bot.answer_callback_query(callback_query_id=query.id)
     bot.edit_message(query.msg.chat.id, query.msg.id, text=query.msg.html_formatted_text, parse_mode='HTML',
@@ -257,6 +260,7 @@ def deconfirm_cri(msg: catbot.Message) -> bool:
     return bot.detect_command('/deconfirm', msg) and msg.chat.type == 'private'
 
 
+@bot.msg_task(deconfirm_cri)
 def deconfirm(msg: catbot.Message):
     button = catbot.InlineKeyboardButton(bot.config['messages']['deconfirm_button'], callback_data='deconfirm')
     keyboard = catbot.InlineKeyboard([[button]])
@@ -267,6 +271,7 @@ def deconfirm_button_cri(query: catbot.CallbackQuery) -> bool:
     return query.data == 'deconfirm' and query.msg.chat.type == 'private'
 
 
+@bot.query_task(deconfirm_button_cri)
 def deconfirm_button(query: catbot.CallbackQuery):
     bot.answer_callback_query(query.id)
     try:
@@ -334,6 +339,7 @@ def new_member_cri(msg: catbot.ChatMemberUpdate) -> bool:
         return False
 
 
+@bot.member_status_task(new_member_cri)
 def new_member(msg: catbot.ChatMemberUpdate):
     if msg.new_chat_member.status == 'restricted':
         restricted_until = msg.new_chat_member.until_date
@@ -395,6 +401,7 @@ def add_whitelist_cri(msg: catbot.Message) -> bool:
     return bot.detect_command('/add_whitelist', msg)
 
 
+@bot.msg_task(add_whitelist_cri)
 def add_whitelist(msg: catbot.Message):
     adder = bot.get_chat_member(bot.config['group'], msg.from_.id)
     if not (adder.status == 'creator' or adder.status == 'administrator'):
@@ -452,6 +459,7 @@ def remove_whitelist_cri(msg: catbot.Message) -> bool:
     return bot.detect_command('/remove_whitelist', msg)
 
 
+@bot.msg_task(remove_whitelist_cri)
 def remove_whitelist(msg: catbot.Message):
     try:
         remover = bot.get_chat_member(bot.config['group'], msg.from_.id)
@@ -514,6 +522,7 @@ def whois_cri(msg: catbot.Message) -> bool:
     return bot.detect_command('/whois', msg) and msg.chat.id == bot.config['group']
 
 
+@bot.msg_task(whois_cri)
 def whois(msg: catbot.Message):
     user_input_token = msg.text.split()
     if msg.reply:
@@ -565,7 +574,7 @@ def whois(msg: catbot.Message):
             return
         resp_text += bot.config['messages']['whois_has_mw'].format(
             wp_id=html_escape(wp_username),
-            ctime=time.strftime('%Y-%m-%d %H:%M', time.gmtime(entry.confirmed_time)),
+            ctime=time.strftime('%Y-%m-%d %H:%M', time.gmtime(ac_record.confirmed_time)),
             site=bot.config['main_site']
         )
     else:
@@ -581,6 +590,7 @@ def refuse_cri(msg: catbot.Message) -> bool:
     return bot.detect_command('/refuse', msg)
 
 
+@bot.msg_task(refuse_cri)
 def refuse(msg: catbot.Message):
     try:
         operator = bot.get_chat_member(bot.config['group'], msg.from_.id)
@@ -644,6 +654,7 @@ def accept_cri(msg: catbot.Message) -> bool:
     return bot.detect_command('/accept', msg)
 
 
+@bot.msg_task(accept_cri)
 def accept(msg: catbot.Message):
     operator = bot.get_chat_member(bot.config['group'], msg.from_.id)
     if not (operator.status == 'creator' or operator.status == 'administrator'):
@@ -685,6 +696,7 @@ def block_unconfirmed_cri(msg: catbot.Message) -> bool:
     return msg.chat.id == bot.config['group']
 
 
+# @bot.msg_task(block_unconfirmed_cri)
 def block_unconfirmed(msg: catbot.Message):
     if hasattr(msg, 'new_chat_members') or hasattr(msg, 'left_chat_member'):
         return
@@ -704,19 +716,5 @@ def block_unconfirmed(msg: catbot.Message):
 
 
 if __name__ == '__main__':
-    bot.add_msg_task(start_cri, start)
-    bot.add_msg_task(policy_cri, policy)
-    bot.add_msg_task(confirm_cri, confirm)
-    bot.add_query_task(confirm_button_cri, confirm_button)
-    bot.add_member_status_task(new_member_cri, new_member)
-    bot.add_msg_task(add_whitelist_cri, add_whitelist)
-    bot.add_msg_task(remove_whitelist_cri, remove_whitelist)
-    bot.add_msg_task(deconfirm_cri, deconfirm)
-    bot.add_query_task(deconfirm_button_cri, deconfirm_button)
-    bot.add_msg_task(whois_cri, whois)
-    bot.add_msg_task(refuse_cri, refuse)
-    bot.add_msg_task(accept_cri, accept)
-    # bot.add_msg_task(block_unconfirmed_cri, block_unconfirmed)
-
     with bot:
         bot.start()
