@@ -1,4 +1,4 @@
-class Ac:
+class AcRecord:
     def __init__(self, telegram_id: int):
         self.confirmed = False
         self.confirming = False
