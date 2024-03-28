@@ -12,7 +12,18 @@ import requests
 
 from acrecord import AcRecord
 
-bot = catbot.Bot(config_path='config.json')
+
+class AcBot(catbot.Bot):
+    def __init__(self, config_path='config.json'):
+        super(AcBot, self).__init__(config_path=config_path)
+        self.ac_record: list[AcRecord] = [AcRecord.from_dict(x) for x in self.record['ac']]
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.record['ac'] = [x.to_dict() for x in self.ac_record]
+        super().__exit__(exc_type, exc_val, exc_tb)
+
+
+bot = AcBot(config_path='config.json')
 t_lock = threading.Lock()
 site = mwclient.Site(bot.config['main_site'], reqs=bot.proxy_kw)
 
@@ -150,36 +161,26 @@ def confirm_cri(msg: catbot.Message) -> bool:
 @bot.msg_task(confirm_cri)
 def confirm(msg: catbot.Message):
     with t_lock:
-        ac_list, rec = bot.secure_record_fetch('ac', list)
-
-        ac_record_index = -1
-        for i in range(len(ac_list)):
-            ac_record = ac_record.from_dict(ac_list[i])
-            if ac_record.telegram_id == msg.from_.id:
-                if ac_record.confirmed:
-                    bot.send_message(msg.chat.id, text=bot.config['messages']['confirm_already'].format(
-                        wp_name=get_mw_username(ac_record.mw_id)
-                    ))
-                    return
-                elif ac_record.confirming:
-                    bot.send_message(msg.chat.id, text=bot.config['messages']['confirm_confirming'])
-                    return
-                elif ac_record.refused:
-                    bot.send_message(msg.chat.id, text=bot.config['messages']['confirm_ineligible'])
-                    return
-                else:
-                    ac_record_index = i
-
+        records_of_id = list(filter(lambda x: x.telegram_id == msg.from_.id, enumerate(bot.ac_record)))
+        if len(records_of_id) == 0:
+            ac_record = AcRecord(msg.from_.id)
+            bot.ac_record.append(ac_record.to_dict())
         else:
-            if ac_record_index == -1:
-                ac_record = ac_record(msg.from_.id)
-                ac_list.append(ac_record.to_dict())
-            ac_record = ac_record.from_dict(ac_list[ac_record_index])
-            ac_record.confirming = True
-            ac_list[ac_record_index] = ac_record.to_dict()
-
-        rec['ac'] = ac_list
-        json.dump(rec, open(bot.config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+            i, ac_record_dict = records_of_id[0]
+            ac_record = AcRecord.from_dict(ac_record_dict)
+            if ac_record.confirmed:
+                bot.send_message(msg.chat.id, text=bot.config['messages']['confirm_already'].format(
+                    wp_name=get_mw_username(ac_record.mw_id)
+                ))
+                return
+            elif ac_record.confirming:
+                bot.send_message(msg.chat.id, text=bot.config['messages']['confirm_confirming'])
+                return
+            elif ac_record.refused:
+                bot.send_message(msg.chat.id, text=bot.config['messages']['confirm_ineligible'])
+                return
+            else:
+                ac_record.confirmed = True
 
     button = catbot.InlineKeyboardButton(bot.config['messages']['confirm_button'], callback_data=f'confirm')
     keyboard = catbot.InlineKeyboard([[button]])
@@ -206,22 +207,20 @@ def confirm_button(query: catbot.CallbackQuery):
     bot.edit_message(query.msg.chat.id, query.msg.id, text=query.msg.html_formatted_text, parse_mode='HTML',
                      disable_web_page_preview=True)
     with t_lock:
-        ac_list, rec = bot.secure_record_fetch('ac', list)
-        for i in range(len(ac_list)):
-            ac_record = ac_record.from_dict(ac_list[i])
-            if ac_record.telegram_id != query.from_.id:
-                continue
+        records_of_id = list(filter(lambda x: x.telegram_id == query.from_.id, bot.ac_record))
+        if len(records_of_id) == 0:
+            bot.send_message(query.msg.chat.id, text=bot.config['messages']['confirm_session_lost'])
+            return
+        else:
+            ac_record = records_of_id[0]
             if ac_record.confirmed:
                 bot.send_message(query.msg.chat.id, text=bot.config['messages']['confirm_already'].format(
                     wp_name=get_mw_username(ac_record.mw_id)
                 ))
                 return
-            if ac_record.confirming:
-                ac_record_index = i
-                break
-        else:
-            bot.send_message(query.msg.chat.id, text=bot.config['messages']['confirm_session_lost'])
-            return
+            elif not ac_record.confirming:
+                bot.send_message(query.msg.chat.id, text=bot.config['messages']['confirm_session_lost'])
+                return
 
         try:
             res = requests.post(
@@ -235,7 +234,17 @@ def confirm_button(query: catbot.CallbackQuery):
             ac_record.confirmed = False
         else:
             if res.status_code == 200 and res.json()['ok']:
-                ac_record.mw_id = res.json()['mw_id']
+                mw_id = res.json()['mw_id']
+
+                same_mw_id_record = list(filter(lambda x: x.mw_id == mw_id, bot.ac_record))
+                if len(same_mw_id_record) > 0:
+                    bot.send_message(
+                        query.msg.chat.id,
+                        text=bot.config['messages']['confirm_other_tg'].format(wp_name=get_mw_username(mw_id))
+                    )
+                    return
+
+                ac_record.mw_id = mw_id
                 ac_record.confirmed = check_eligibility(query, ac_record.mw_id)
             else:
                 ac_record.confirmed = False
@@ -243,10 +252,6 @@ def confirm_button(query: catbot.CallbackQuery):
             if ac_record.confirmed:
                 ac_record.confirmed_time = time.time()
             ac_record.confirming = False
-
-        ac_list[ac_record_index] = ac_record.to_dict()
-        rec['ac'] = ac_list
-        json.dump(rec, open(bot.config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
     if ac_record.confirmed:
         bot.send_message(query.msg.chat.id, text=bot.config['messages']['confirm_complete'])
@@ -291,25 +296,20 @@ def deconfirm_button(query: catbot.CallbackQuery):
             restricted_until = 0
 
     with t_lock:
-        ac_list, rec = bot.secure_record_fetch('ac', list)
-        for i in range(len(ac_list)):
-            ac_record = ac_record.from_dict(ac_list[i])
+        records_of_id = list(filter(lambda x: x.telegram_id == query.from_.id, bot.ac_record))
+        if len(records_of_id) == 0:
+            bot.send_message(query.msg.chat.id, text=bot.config['messages']['deconfirm_not_confirmed'])
+            return
+        else:
+            ac_record = records_of_id[0]
             if ac_record.telegram_id == query.from_.id:
                 if ac_record.confirmed:
                     ac_record.confirmed = False
-                    ac_list[i] = ac_record.to_dict()
                     if restricted_until != -1:
                         ac_record.restricted_until = restricted_until
-                    break
                 else:
                     bot.send_message(query.msg.chat.id, text=bot.config['messages']['deconfirm_not_confirmed'])
                     return
-        else:
-            bot.send_message(query.msg.chat.id, text=bot.config['messages']['deconfirm_not_confirmed'])
-            return
-
-        rec['ac'] = ac_list
-        json.dump(rec, open(bot.config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
     log(bot.config['messages']['deconfirm_log'].format(
         tg_id=ac_record.telegram_id,
@@ -369,35 +369,30 @@ def new_member(msg: catbot.ChatMemberUpdate):
         return
 
     with t_lock:
-        ac_list, rec = bot.secure_record_fetch('ac', list)
-        for i in range(len(ac_list)):
-            ac_record = ac_record.from_dict(ac_list[i])
-            if ac_record.telegram_id == msg.new_chat_member.id:
-                user_index = i
-                break
+        records_of_id = list(filter(lambda x: x.telegram_id == msg.from_.id, bot.ac_record))
+        if len(records_of_id) == 0:
+            ac_record = AcRecord(msg.from_.id)
+            bot.ac_record.append(ac_record)
         else:
-            ac_record = ac_record(msg.from_.id)
-            ac_list.append(ac_record)
-            user_index = -1
+            ac_record = records_of_id[0]
 
         if restricted_until != -1:
             ac_record.restricted_until = restricted_until
-        ac_list[user_index] = ac_record.to_dict()
-        rec['ac'] = ac_list
-        json.dump(rec, open(bot.config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
     if ac_record.confirmed or ac_record.whitelist_reason:
         lift_restriction_trial(ac_record, bot.config['group'])
     else:
         with t_lock:
-            last_id, rec = bot.secure_record_fetch('last_welcome', int)
-            cur = bot.send_message(bot.config['group'],
-                                   text=bot.config['messages']['new_member_hint'].format(
-                                       tg_id=msg.new_chat_member.id,
-                                       tg_name=html_escape(msg.new_chat_member.name)),
-                                   parse_mode='HTML')
-            rec['last_welcome'] = cur.id
-            json.dump(rec, open(bot.config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+            cur = bot.send_message(
+                bot.config['group'],
+                text=bot.config['messages']['new_member_hint'].format(
+                    tg_id=msg.new_chat_member.id,
+                    tg_name=html_escape(msg.new_chat_member.name)
+                ),
+                parse_mode='HTML'
+            )
+            last_id = bot.record['last_welcome']
+            bot.record['last_welcome'] = cur.id
             try:
                 bot.delete_message(bot.config['group'], last_id)
             except catbot.DeleteMessageError:
@@ -440,20 +435,15 @@ def add_whitelist(msg: catbot.Message):
             reason = 'whitelisted'
 
     with t_lock:
-        ac_list, rec = bot.secure_record_fetch('ac', list)
-        for i in range(len(ac_list)):
-            ac_record = ac_record.from_dict(ac_list[i])
+        records_of_id = list(filter(lambda x: x.telegram_id == whitelist_id, bot.ac_record))
+        if len(records_of_id) == 0:
+            ac_record = AcRecord(whitelist_id)
+            ac_record.whitelist_reason = reason
+            bot.ac_record.append(ac_record)
+        else:
+            ac_record = records_of_id[0]
             if ac_record.telegram_id == whitelist_id:
                 ac_record.whitelist_reason = reason
-                ac_list[i] = ac_record.to_dict()
-                break
-        else:
-            ac_record = ac_record(whitelist_id)
-            ac_record.whitelist_reason = reason
-            ac_list.append(ac_record.to_dict())
-
-        rec['ac'] = ac_list
-        json.dump(rec, open(bot.config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
     log(bot.config['messages']['add_whitelist_log'].format(
         adder=html_escape(adder.name),

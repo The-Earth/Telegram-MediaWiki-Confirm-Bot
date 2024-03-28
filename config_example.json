@@ -5,7 +5,10 @@
     "proxy_url": "http://127.0.0.1:9999"
   },
   "record": "record.json",
-  "group": -100123456789,
+  "groups": [
+    -100123456789,
+    -100987654321
+  ],
   "log_channel": 987654321,
   "main_site": "zh.wikipedia.org",
   "oauth_auth_url": "https://telegram-auth-bot.toolforge.org/auth?id={telegram_id}",
@@ -21,6 +24,7 @@
     "telegram_id_error": "这里只接受数字 ID。",
     "restore_silence": "已按<a href=\"tg://user?id={tg_id}\">此用户</a> (<code>{tg_id}</code>) 先前的禁言记录实施禁言，请复查。",
     "confirm_already": "您已成功验证站内账户 {wp_name}。若无法发言，请联络群组管理员。若要更改关联的维基百科账户，请先使用 /deconfirm 解除关联，然后重新验证。",
+    "confirm_other_tg": "已有其他Telegram账户验证为站内账户 {wp_name}，若要更改关联的维基百科账户，请先解除该Telegram账户的验证后重新验证。若无法自行解除，请联络群组管理员",
     "confirm_conflict": "您提供的维基百科用户名已验证为其他 Telegram 账户。",
     "confirm_checking": "正在检查您的维基百科账户",
     "confirm_user_not_found": "未找到 id 为 {mw_id} 的维基百科用户。",
