@@ -1,4 +1,3 @@
-import json
 import threading
 import time
 from calendar import timegm
@@ -314,8 +313,8 @@ def deconfirm_button(query: catbot.CallbackQuery):
     log(bot.config['messages']['deconfirm_log'].format(
         tg_id=ac_record.telegram_id,
         wp_name=get_mw_username(ac_record.mw_id),
-        site=bot.config['main_site'])
-    )
+        site=bot.config['main_site']
+    ))
     bot.send_message(query.msg.chat.id, text=bot.config['messages']['deconfirm_succ'])
 
     silence_trial(ac_record)
@@ -495,26 +494,26 @@ def remove_whitelist(msg: catbot.Message):
             restricted_until = 0
 
     with t_lock:
-        ac_list, rec = bot.secure_record_fetch('ac', list)
-        for i in range(len(ac_list)):
-            ac_record = ac_record.from_dict(ac_list[i])
-            if ac_record.telegram_id == whitelist_id and ac_record.whitelist_reason:
-                ac_record.whitelist_reason = ''
-                if restricted_until != -1:
-                    ac_record.restricted_until = restricted_until
-                ac_list[i] = ac_record.to_dict()
-                break
-        else:
-            bot.send_message(msg.chat.id, text=bot.config['messages']['remove_whitelist_not_found'],
-                             reply_to_message_id=msg.id)
+        records_of_id = list(filter(lambda x: x.telegram_id == whitelist_id and x.whitelist_reason, bot.ac_record))
+        if len(records_of_id) == 0:
+            bot.send_message(
+                msg.chat.id,
+                text=bot.config['messages']['remove_whitelist_not_found'],
+                reply_to_message_id=msg.id
+            )
             return
-
-        rec['ac'] = ac_list
-        json.dump(rec, open(bot.config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+        else:
+            ac_record = records_of_id[0]
+            ac_record.whitelist_reason = ''
+            if restricted_until != -1:
+                ac_record.restricted_until = restricted_until
 
     log(bot.config['messages']['remove_whitelist_log'].format(remover=html_escape(remover.name), tg_id=whitelist_id))
-    bot.send_message(msg.chat.id, text=bot.config['messages']['remove_whitelist_succ'].format(tg_id=whitelist_id),
-                     reply_to_message_id=msg.id)
+    bot.send_message(
+        msg.chat.id,
+        text=bot.config['messages']['remove_whitelist_succ'].format(tg_id=whitelist_id),
+        reply_to_message_id=msg.id
+    )
 
     silence_trial(ac_record, msg.chat.id)
 
@@ -552,19 +551,18 @@ def whois(msg: catbot.Message):
                 return
 
     with t_lock:
-        ac_list, rec = bot.secure_record_fetch('ac', list)
-        for i in range(len(ac_list)):
-            ac_record = ac_record.from_dict(ac_list[i])
-            if (ac_record.confirmed or ac_record.whitelist_reason) and (ac_record.telegram_id == whois_id or
-                                                                        ac_record.mw_id == whois_mw_id):
-                break
-        else:
+        def match(x):
+            return (x.confirmed or x.whitelist_reason) and (x.telegram_id == whois_id or x.mw_id == whois_mw_id)
+        records_of_id = list(filter(match, bot.ac_record))
+        if len(records_of_id) == 0:
             bot.send_message(
                 bot.config['group'],
                 text=bot.config['messages']['whois_not_found'],
                 reply_to_message_id=msg.id
             )
             return
+        else:
+            ac_record = records_of_id[0]
 
     try:
         whois_member = bot.get_chat_member(bot.config['group'], ac_record.telegram_id)
@@ -638,25 +636,18 @@ def refuse(msg: catbot.Message):
             restricted_until = 0
 
     with t_lock:
-        ac_list, rec = bot.secure_record_fetch('ac', list)
-        for i in range(len(ac_list)):
-            ac_record = ac_record.from_dict(ac_list[i])
-            if ac_record.telegram_id == refused_id:
-                refused_index = i
-                break
+        records_of_id = list(filter(lambda x: x.telegram_id == refused_id, bot.ac_record))
+        if len(records_of_id) == 0:
+            ac_record = AcRecord(refused_id)
+            bot.ac_record.append(ac_record)
         else:
-            ac_record = ac_record(refused_id)
-            ac_list.append(ac_record)
-            refused_index = -1
+            ac_record = records_of_id[0]
 
         if restricted_until != -1:
             ac_record.restricted_until = restricted_until
         ac_record.confirmed = False
         ac_record.confirming = False
         ac_record.refused = True
-        ac_list[refused_index] = ac_record.to_dict()
-        rec['ac'] = ac_list
-        json.dump(rec, open(bot.config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
     log(bot.config['messages']['refuse_log'].format(tg_id=refused_id, refuser=html_escape(operator.name)))
 
@@ -687,20 +678,14 @@ def accept(msg: catbot.Message):
             return
 
     with t_lock:
-        ac_list, rec = bot.secure_record_fetch('ac', list)
-        for i in range(len(ac_list)):
-            ac_record = ac_record.from_dict(ac_list[i])
-            if ac_record.telegram_id == accepted_id:
-                accepted_index = i
-                break
+        records_of_id = list(filter(lambda x: x.telegram_id == accepted_id, bot.ac_record))
+        if len(records_of_id) == 0:
+            ac_record = AcRecord(accepted_id)
+            bot.ac_record.append(ac_record)
         else:
-            ac_record = ac_record(accepted_id)
-            ac_list.append(ac_record)
-            accepted_index = -1
+            ac_record = records_of_id[0]
+
         ac_record.refused = False
-        ac_list[accepted_index] = ac_record.to_dict()
-        rec['ac'] = ac_list
-        json.dump(rec, open(bot.config['record'], 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
 
     log(bot.config['messages']['accept_log'].format(tg_id=accepted_id, acceptor=html_escape(operator.name)))
 
@@ -714,13 +699,11 @@ def block_unconfirmed(msg: catbot.Message):
     if hasattr(msg, 'new_chat_members') or hasattr(msg, 'left_chat_member'):
         return
     with t_lock:
-        ac_list, rec = bot.secure_record_fetch('ac', list)
-        for i, item in enumerate(ac_list):
-            ac_record = ac_record.from_dict(item)
-            if ac_record.telegram_id == msg.from_.id and ac_record.confirmed:
-                return
-            if ac_record.telegram_id == msg.from_.id and ac_record.whitelist_reason:
-                return
+        def match(x):
+            return x.telegram_id == msg.from_.id and (x.confirmed or x.whitelist_reason)
+        records_of_id = list(filter(match, bot.ac_record))
+        if len(records_of_id) > 0:
+            return
 
     try:
         bot.delete_message(bot.config['group'], msg.id)
