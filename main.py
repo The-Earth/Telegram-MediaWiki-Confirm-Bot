@@ -395,7 +395,7 @@ def new_member(msg: catbot.ChatMemberUpdate):
 
 
 def add_whitelist_cri(msg: catbot.Message) -> bool:
-    return bot.detect_command('/add_whitelist', msg) and msg.chat.type != 'private'
+    return bot.detect_command('/add_whitelist', msg) and msg.chat.id in bot.config['groups']
 
 
 @bot.msg_task(add_whitelist_cri)
@@ -454,7 +454,7 @@ def add_whitelist(msg: catbot.Message):
 
 
 def remove_whitelist_cri(msg: catbot.Message) -> bool:
-    return bot.detect_command('/remove_whitelist', msg) and msg.chat.type != 'private'
+    return bot.detect_command('/remove_whitelist', msg) and msg.chat.id in bot.config['groups']
 
 
 @bot.msg_task(remove_whitelist_cri)
@@ -590,7 +590,7 @@ def whois(msg: catbot.Message):
 
 
 def refuse_cri(msg: catbot.Message) -> bool:
-    return bot.detect_command('/refuse', msg) and msg.chat.type != 'private'
+    return bot.detect_command('/refuse', msg) and msg.chat.id in bot.config['groups']
 
 
 @bot.msg_task(refuse_cri)
@@ -634,7 +634,7 @@ def refuse(msg: catbot.Message):
 
 
 def accept_cri(msg: catbot.Message) -> bool:
-    return bot.detect_command('/accept', msg) and msg.chat.type != 'private'
+    return bot.detect_command('/accept', msg) and msg.chat.id in bot.config['groups']
 
 
 @bot.msg_task(accept_cri)
@@ -670,7 +670,7 @@ def accept(msg: catbot.Message):
 
 
 def block_unconfirmed_cri(msg: catbot.Message) -> bool:
-    if msg.chat.id in bot.config['groups']:
+    if msg.chat.id not in bot.config['groups']:
         return False
     elif msg.from_.is_bot:
         return False
@@ -693,6 +693,46 @@ def block_unconfirmed(msg: catbot.Message):
         bot.delete_message(msg.chat.id, msg.id)
     except catbot.DeleteMessageError:
         print(f'[Error] Delete message {msg.id} failed.')
+
+
+def enable_cri(msg: catbot.Message):
+    return bot.detect_command('/enable', msg) and msg.chat.type != 'private'
+
+
+@bot.msg_task(enable_cri)
+def enable(msg: catbot.Message):
+    try:
+        adder = bot.get_chat_member(msg.chat.id, msg.from_.id)
+    except catbot.UserNotFoundError:
+        return
+    if not (adder.status == 'creator' or adder.status == 'administrator'):
+        return
+
+    with t_lock:
+        new_groups = set(bot.config['groups'])
+        new_groups.add(msg.chat.id)
+        bot.config['groups'] = list(new_groups)
+
+    bot.send_message(msg.chat.id, bot.config['messages']['enable'], reply_to_message_id=msg.id)
+
+
+def disable_cri(msg: catbot.Message):
+    return bot.detect_command('/disable', msg) and msg.chat.type != 'private'
+
+
+@bot.msg_task(enable_cri)
+def enable(msg: catbot.Message):
+    try:
+        adder = bot.get_chat_member(msg.chat.id, msg.from_.id)
+    except catbot.UserNotFoundError:
+        return
+    if not (adder.status == 'creator' or adder.status == 'administrator'):
+        return
+
+    with t_lock:
+        bot.config['groups'].remove(msg.chat.id)
+
+    bot.send_message(msg.chat.id, bot.config['messages']['disable'], reply_to_message_id=msg.id)
 
 
 if __name__ == '__main__':
