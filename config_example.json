@@ -57,6 +57,8 @@
     "whois_whitelisted": "该用户在白名单中，备注：{reason}",
     "whois_tg_name_unavailable": "（无法获取Telegram用户名）",
     "refuse_log": "#禁 #u_{tg_id}\n{refuser} 已禁止 <a href=\"tg://user?id={tg_id}\">{tg_id}</a> 进行验证。",
-    "accept_log": "#禁 #u_{tg_id}\n{acceptor} 已允许 <a href=\"tg://user?id={tg_id}\">{tg_id}</a> 进行验证。"
+    "accept_log": "#禁 #u_{tg_id}\n{acceptor} 已允许 <a href=\"tg://user?id={tg_id}\">{tg_id}</a> 进行验证。",
+    "lift_restriction_alert": "{name} (<code>{tg_id}</code>) 被允许发言",
+    "silence_alert": "{name} (<code>{tg_id}</code>) 被禁止发言"
   }
 }
