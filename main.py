@@ -703,7 +703,7 @@ def block_unconfirmed(msg: catbot.Message):
 
 
 def enable_cri(msg: catbot.Message):
-    return bot.detect_command('/enable', msg) and msg.chat.type != 'private'
+    return bot.detect_command('/enable', msg, require_username=True) and msg.chat.type != 'private'
 
 
 @bot.msg_task(enable_cri)
@@ -724,7 +724,7 @@ def enable(msg: catbot.Message):
 
 
 def disable_cri(msg: catbot.Message):
-    return bot.detect_command('/disable', msg) and msg.chat.type != 'private'
+    return bot.detect_command('/disable', msg, require_username=True) and msg.chat.type != 'private'
 
 
 @bot.msg_task(disable_cri)
