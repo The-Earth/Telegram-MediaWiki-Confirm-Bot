@@ -25,7 +25,7 @@ class AcBot(catbot.Bot):
         super().__exit__(exc_type, exc_val, exc_tb)
 
 
-bot = AcBot(config_path='config.json')
+bot = AcBot(config_path='config_test.json')
 t_lock = threading.Lock()
 site = mwclient.Site(bot.config['main_site'], reqs={'proxies': bot.proxies})
 
@@ -385,16 +385,16 @@ def new_member(msg: catbot.ChatMemberUpdate):
                 ),
                 parse_mode='HTML'
             )
-            if 'last_welcome' in bot.record and msg.chat.id in bot.record['last_welcome']:
-                last_id = bot.record['last_welcome'][msg.chat.id]
+            if 'last_welcome' in bot.record and str(msg.chat.id) in bot.record['last_welcome']:
+                last_id = bot.record['last_welcome'][str(msg.chat.id)]
                 try:
                     bot.delete_message(msg.chat.id, last_id)
                 except catbot.DeleteMessageError:
                     pass
             if 'last_welcome' in bot.record:
-                bot.record['last_welcome'][msg.chat.id] = cur.id
+                bot.record['last_welcome'][str(msg.chat.id)] = cur.id
             else:
-                bot.record['last_welcome'] = {msg.chat.id: cur.id}
+                bot.record['last_welcome'] = {str(msg.chat.id): cur.id}
 
 
 def add_whitelist_cri(msg: catbot.Message) -> bool:
