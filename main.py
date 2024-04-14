@@ -25,7 +25,7 @@ class AcBot(catbot.Bot):
         super().__exit__(exc_type, exc_val, exc_tb)
 
 
-bot = AcBot(config_path='config_test.json')
+bot = AcBot(config_path='config.json')
 t_lock = threading.Lock()
 site = mwclient.Site(bot.config['main_site'], reqs={'proxies': bot.proxies})
 
@@ -44,8 +44,8 @@ def silence_trial(ac_record: AcRecord, chat_id: int, alert=False):
             if alert:
                 bot.send_message(chat_id, text=bot.config['message']['silence_alert'].format(
                     name=member.name,
-                    tg_id=ac_record.telegram_id
-                ))
+                    tg_id=ac_record.telegram_id,
+                ), parse_mode='HTML')
         except catbot.InsufficientRightError:
             if alert:
                 bot.send_message(chat_id, text=bot.config['messages']['insufficient_right'])
@@ -65,7 +65,7 @@ def lift_restriction_trial(ac_record: AcRecord, chat_id: int, alert=False):
             bot.send_message(chat_id, text=bot.config['message']['lift_restriction_alert'].format(
                 name=member.name,
                 tg_id=ac_record.telegram_id
-            ))
+            ), parse_mode='HTML')
     except catbot.RestrictAdminError:
         pass
     except catbot.InsufficientRightError:
