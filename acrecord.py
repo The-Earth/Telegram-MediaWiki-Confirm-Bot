@@ -26,7 +26,9 @@ class AcRecord:
         obj.mw_id = data['mw_id']
         obj.confirmed_time = data['confirmed_time']
         obj.restricted_until = data['restricted_until']
-        obj.whitelist_reason = defaultdict(str, data['whitelist_reason'])
+        obj.whitelist_reason = defaultdict(str)
+        for key in data['whitelist_reason']:
+            obj.whitelist_reason[int(key)] = data['whitelist_reason'][key]
         obj.refused = data['refused']
 
         return obj

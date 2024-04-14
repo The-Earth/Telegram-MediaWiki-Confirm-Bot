@@ -15,7 +15,10 @@ from acrecord import AcRecord
 class AcBot(catbot.Bot):
     def __init__(self, config_path='config.json'):
         super(AcBot, self).__init__(config_path=config_path)
-        self.ac_record: list[AcRecord] = [AcRecord.from_dict(x) for x in self.record['ac']]
+        if 'ac' in self.record:
+            self.ac_record: list[AcRecord] = [AcRecord.from_dict(x) for x in self.record['ac']]
+        else:
+            self.ac_record: list[AcRecord] = []
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.record['ac'] = [x.to_dict() for x in self.ac_record]
@@ -24,7 +27,7 @@ class AcBot(catbot.Bot):
 
 bot = AcBot(config_path='config.json')
 t_lock = threading.Lock()
-site = mwclient.Site(bot.config['main_site'], reqs=bot.proxy_kw)
+site = mwclient.Site(bot.config['main_site'], reqs={'proxies': bot.proxies})
 
 
 def log(text):
@@ -167,7 +170,8 @@ def confirm(msg: catbot.Message):
         records_of_id = list(filter(lambda x: x.telegram_id == msg.from_.id, bot.ac_record))
         if len(records_of_id) == 0:
             ac_record = AcRecord(msg.from_.id)
-            bot.ac_record.append(ac_record.to_dict())
+            bot.ac_record.append(ac_record)
+            ac_record.confirming = True
         else:
             ac_record: AcRecord = records_of_id[0]
             if ac_record.confirmed:
@@ -182,7 +186,7 @@ def confirm(msg: catbot.Message):
                 bot.send_message(msg.chat.id, text=bot.config['messages']['confirm_ineligible'])
                 return
             else:
-                ac_record.confirmed = True
+                ac_record.confirming = True
 
     button = catbot.InlineKeyboardButton(bot.config['messages']['confirm_button'], callback_data=f'confirm')
     keyboard = catbot.InlineKeyboard([[button]])
@@ -237,17 +241,16 @@ def confirm_button(query: catbot.CallbackQuery):
         else:
             if res.status_code == 200 and res.json()['ok']:
                 mw_id: int = res.json()['mw_id']
+                ac_record.mw_id = mw_id
 
                 same_mw_id_record = list(filter(lambda x: x.mw_id == mw_id, bot.ac_record))
-                if len(same_mw_id_record) > 0:
+                if len(same_mw_id_record) > 1:
                     bot.send_message(
                         query.msg.chat.id,
                         text=bot.config['messages']['confirm_other_tg'].format(wp_name=get_mw_username(mw_id))
                     )
-                    return
-
-                ac_record.mw_id = mw_id
-                ac_record.confirmed = check_eligibility(query, ac_record.mw_id)
+                else:
+                    ac_record.confirmed = check_eligibility(query, ac_record.mw_id)
             else:
                 ac_record.confirmed = False
         finally:
@@ -447,8 +450,12 @@ def add_whitelist(msg: catbot.Message):
         tg_id=whitelist_id,
         reason=reason
     ))
-    bot.send_message(msg.chat.id, text=bot.config['messages']['add_whitelist_succ'].format(tg_id=whitelist_id),
-                     reply_to_message_id=msg.id)
+    bot.send_message(
+        msg.chat.id,
+        text=bot.config['messages']['add_whitelist_succ'].format(tg_id=whitelist_id),
+        reply_to_message_id=msg.id,
+        parse_mode='HTML'
+    )
 
     lift_restriction_trial(ac_record, msg.chat.id)
 
@@ -720,8 +727,8 @@ def disable_cri(msg: catbot.Message):
     return bot.detect_command('/disable', msg) and msg.chat.type != 'private'
 
 
-@bot.msg_task(enable_cri)
-def enable(msg: catbot.Message):
+@bot.msg_task(disable_cri)
+def disable(msg: catbot.Message):
     try:
         adder = bot.get_chat_member(msg.chat.id, msg.from_.id)
     except catbot.UserNotFoundError:
