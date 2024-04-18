@@ -42,7 +42,7 @@ def silence_trial(ac_record: AcRecord, chat_id: int, alert=False):
         try:
             bot.silence_chat_member(chat_id, ac_record.telegram_id)
             if alert:
-                bot.send_message(chat_id, text=bot.config['message']['silence_alert'].format(
+                bot.send_message(chat_id, text=bot.config['messages']['silence_alert'].format(
                     name=member.name,
                     tg_id=ac_record.telegram_id,
                 ), parse_mode='HTML')
@@ -62,7 +62,7 @@ def lift_restriction_trial(ac_record: AcRecord, chat_id: int, alert=False):
     try:
         bot.lift_restrictions(chat_id, ac_record.telegram_id)
         if alert:
-            bot.send_message(chat_id, text=bot.config['message']['lift_restriction_alert'].format(
+            bot.send_message(chat_id, text=bot.config['messages']['lift_restriction_alert'].format(
                 name=member.name,
                 tg_id=ac_record.telegram_id
             ), parse_mode='HTML')
