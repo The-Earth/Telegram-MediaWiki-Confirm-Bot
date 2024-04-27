@@ -243,8 +243,8 @@ def confirm_button(query: catbot.CallbackQuery):
                 mw_id: int = res.json()['mw_id']
                 ac_record.mw_id = mw_id
 
-                same_mw_id_record = list(filter(lambda x: x.mw_id == mw_id, bot.ac_record))
-                if len(same_mw_id_record) > 1:
+                same_mw_id_record = list(filter(lambda x: x.mw_id == mw_id and x.confirmed, bot.ac_record))
+                if len(same_mw_id_record) >= 1:
                     bot.send_message(
                         query.msg.chat.id,
                         text=bot.config['messages']['confirm_other_tg'].format(wp_name=get_mw_username(mw_id))
