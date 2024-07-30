@@ -148,7 +148,7 @@ def start_cri(msg: catbot.Message) -> bool:
 
 @bot.msg_task(start_cri)
 def start(msg: catbot.Message):
-    bot.send_message(msg.chat.id, text=bot.config['messages']['start'])
+    bot.send_message(msg.chat.id, text=bot.config['messages']['start'], parse_mode='HTML')
 
 
 def policy_cri(msg: catbot.Message) -> bool:
@@ -268,7 +268,7 @@ def confirm_button(query: catbot.CallbackQuery):
             site=bot.config['main_site']
         ))
     else:
-        bot.send_message(query.msg.chat.id, text=bot.config['messages']['confirm_failed'])
+        bot.send_message(query.msg.chat.id, text=bot.config['messages']['confirm_failed'], parse_mode='HTML')
 
 
 def deconfirm_cri(msg: catbot.Message) -> bool:
