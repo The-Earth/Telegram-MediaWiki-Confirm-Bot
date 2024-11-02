@@ -27,7 +27,7 @@ class AcBot(catbot.Bot):
 
 bot = AcBot(config_path='config.json')
 t_lock = threading.Lock()
-site = mwclient.Site(bot.config['main_site'], reqs={'proxies': bot.proxies})
+site = mwclient.Site(bot.config['main_site'], connection_options={'proxies': bot.proxies})
 
 
 def log(text):
