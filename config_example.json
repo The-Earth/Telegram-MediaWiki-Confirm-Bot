@@ -61,6 +61,8 @@
     "lift_restriction_alert": "{name} (<code>{tg_id}</code>) 被允许发言",
     "silence_alert": "{name} (<code>{tg_id}</code>) 被禁止发言",
     "enable": "启用成功",
-    "disable": "禁用成功"
+    "disable": "禁用成功",
+    "enable_log": "#开 #u_{tg_id}\n群管 {enabler} 在 <a href=\"{chat_link}\">{chat_name}</a> 启用验证",
+    "disable_log": "#关 #u_{tg_id}\n群管 {enabler} 在 <a href=\"{chat_link}\">{chat_name}</a> 禁用验证"
   }
 }

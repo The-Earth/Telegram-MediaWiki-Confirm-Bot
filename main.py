@@ -721,6 +721,13 @@ def enable(msg: catbot.Message):
         bot.config['groups'] = list(new_groups)
 
     bot.send_message(msg.chat.id, bot.config['messages']['enable'], reply_to_message_id=msg.id)
+    chat = bot.get_chat(msg.chat.id)
+    log(bot.config["messages"]["enable_log"].format(
+        tg_id=adder.id,
+        enabler=adder.name,
+        chat_link=chat.invite_link,
+        chat_name=chat.name
+    ))
 
 
 def disable_cri(msg: catbot.Message):
@@ -740,6 +747,13 @@ def disable(msg: catbot.Message):
         bot.config['groups'].remove(msg.chat.id)
 
     bot.send_message(msg.chat.id, bot.config['messages']['disable'], reply_to_message_id=msg.id)
+    chat = bot.get_chat(msg.chat.id)
+    log(bot.config["messages"]["disable_log"].format(
+        tg_id=adder.id,
+        disabler=adder.name,
+        chat_link=chat.invite_link,
+        chat_name=chat.name
+    ))
 
 
 if __name__ == '__main__':
