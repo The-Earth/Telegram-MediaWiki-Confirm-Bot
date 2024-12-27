@@ -544,6 +544,14 @@ def whois(msg: catbot.Message):
                 )
                 return
 
+    if whois_id == bot.id:
+        bot.send_message(
+            msg.chat.id,
+            text=bot.config['messages']['whois_self'],
+            reply_to_message_id=msg.id
+        )
+        return
+
     with t_lock:
         def match(x):
             return (x.confirmed or x.whitelist_reason[msg.chat.id]) and (x.telegram_id == whois_id or x.mw_id == whois_mw_id)

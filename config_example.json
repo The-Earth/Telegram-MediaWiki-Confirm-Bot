@@ -52,6 +52,7 @@
     "whois_head": "{name} (<code>{tg_id}</code>)\n",
     "whois_prompt": "使用方法：\n1. 以 /whois 回复要查询的用户\n2. /whois <Telegram 数字ID>\n3. /whois <站内用户名>",
     "whois_not_found": "未查到该用户。",
+    "whois_self": "这是我自己",
     "whois_has_mw": "维基百科账号：<a href=\"https://{site}/wiki/Special:Contributions/{wp_id}\">{wp_id}</a>（于 {ctime} (UTC) 验证）",
     "whois_no_mw": "未验证维基百科账户\n",
     "whois_whitelisted": "该用户在白名单中，备注：{reason}",
