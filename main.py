@@ -568,6 +568,13 @@ def whois(msg: catbot.Message):
 
     try:
         whois_member = bot.get_chat_member(msg.chat.id, ac_record.telegram_id)
+        if whois_member.is_bot:
+            bot.send_message(
+                msg.chat.id,
+                text=bot.config['messages']['whois_bot'],
+                reply_to_message_id=msg.id
+            )
+            return
         name = html_escape(whois_member.name)
     except catbot.UserNotFoundError:
         name = bot.config['messages']['whois_tg_name_unavailable']
