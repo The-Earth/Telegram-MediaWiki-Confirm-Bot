@@ -1,0 +1,13 @@
+[project]
+name = "telegram-mediawiki-confirm-bot"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.13"
+dependencies = [
+    "catbot",
+    "mwclient>=0.11.0",
+    "requests>=2.32.4",
+]
+
+[tool.uv.sources]
+catbot = { git = "https://github.com/The-Earth/catbot.git" }
