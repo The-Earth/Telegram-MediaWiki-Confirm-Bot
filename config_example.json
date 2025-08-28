@@ -34,7 +34,7 @@
     "confirm_ineligible": "对不起，您尚未达到入群门槛。\n\n<b>不要为了入群而用快速编辑积累编辑次数，您会因此遭到封禁而无法再编辑。</b>\n\n",
     "confirm_session_lost": "对不起，为确保验证有效，请重新使用 /confirm 指令进行验证。",
     "confirm_complete": "验证成功。",
-    "confirm_failed": "验证失败，请重新使用 /confirm 指令进行验证。",
+    "confirm_failed": "验证失败，请使用 /policy 查看验证通过的条件。您可以在日后重新使用 /confirm 指令进行验证。若您确信您已满足条件而无法验证通过，请联系群组管理员。",
     "confirm_log": "#新 #u_{tg_id}\n<a href=\"tg://user?id={tg_id}\">{tg_id}</a> 验证为 <a href=\"https://{site}/wiki/Special:Contributions/{wp_name}\">{wp_name}</a>",
     "deconfirm_prompt": "您可以使用下方的按钮来解除 Telegram 账户与维基百科账户的关联。解除关联后，您将无法在群内发言。",
     "deconfirm_button": "解除关联",
