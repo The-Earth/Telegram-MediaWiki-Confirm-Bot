@@ -505,7 +505,8 @@ def remove_whitelist(msg: catbot.Message):
     bot.send_message(
         msg.chat.id,
         text=bot.config['messages']['remove_whitelist_succ'].format(tg_id=whitelist_id),
-        reply_to_message_id=msg.id
+        reply_to_message_id=msg.id,
+        parse_mode='HTML'
     )
 
     silence_trial(ac_record, msg.chat.id)
