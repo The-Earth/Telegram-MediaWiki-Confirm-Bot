@@ -382,7 +382,8 @@ def new_member(msg: catbot.ChatMemberUpdate):
     else:
         with t_lock:
             if bot.config.get('mosaic_new_member_name', False):
-                 mosaic_method = MosaicMethod[bot.config.get('mosaic_method', 'SPOILER').upper()]
+                 method_str = bot.config.get('mosaic_method', 'SPOILER').upper()             
+                 mosaic_method = getattr(MosaicMethod, method_str, MosaicMethod.SPOILER)
                  masked_name = TextFormatter.mosaic_name(msg.new_chat_member.name, mosaic_method)
             else:
                  masked_name = html_escape(msg.new_chat_member.name)
