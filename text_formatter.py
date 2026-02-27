@@ -68,7 +68,7 @@ class TextFormatter:
             else:  # SPOILER
                 first = TextFormatter.safe_html(name[0])
                 second = TextFormatter.safe_html(name[1])
-                return f"{first}<tg-spoiler>{second}</tg-spoiler>"
+                return first + "<tg-spoiler>" + second + "</tg-spoiler>"
         
         # 3-5个字符 - 隐藏中间
         if 3 <= name_len <= 5:
@@ -79,7 +79,7 @@ class TextFormatter:
                 first = TextFormatter.safe_html(name[0])
                 middle = TextFormatter.safe_html(name[1:-1])
                 last = TextFormatter.safe_html(name[-1])
-                return f"{first}<tg-spoiler>{middle}</tg-spoiler>{last}"
+                return first + "<tg-spoiler>" + middle + "</tg-spoiler>" + last
         
         # 6个以上 - 隐藏中间
         if method == MosaicMethod.CLASSIC:
@@ -88,4 +88,4 @@ class TextFormatter:
             first = TextFormatter.safe_html(name[0])
             middle = TextFormatter.safe_html(name[1:-1])
             last = TextFormatter.safe_html(name[-1])
-            return f"{first}<tg-spoiler>{middle}</tg-spoiler>{last}"
+            return first + "<tg-spoiler>" + middle + "</tg-spoiler>" + last
