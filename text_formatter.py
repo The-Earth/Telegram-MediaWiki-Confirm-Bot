@@ -91,3 +91,4 @@ class TextFormatter:
             middle = TextFormatter.safe_html(name[1:-1])
             last = TextFormatter.safe_html(name[-1])
             return f"{first}<tg-spoiler>{middle}</tg-spoiler>{last}"
+            
