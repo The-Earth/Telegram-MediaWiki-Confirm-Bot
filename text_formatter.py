@@ -4,8 +4,8 @@ Telegram 新成员欢迎消息的文本格式化工具
 只用于隐藏新成员加入时的用户名
 """
 
+import unittest
 from enum import Enum
-import re
 
 
 class MosaicMethod(Enum):
@@ -55,6 +55,10 @@ class TextFormatter:
             >>> mosaic_name("Hentioe")
             "H<tg-spoiler>entio</tg-spoiler>e"
         """
+        # 防御：处理空字符串
+        if not name:
+            return ""
+            
         name_len = len(name)
         
         # 1个字符 - 不处理
@@ -64,28 +68,26 @@ class TextFormatter:
         # 2个字符
         if name_len == 2:
             if method == MosaicMethod.CLASSIC:
-                return name[0] + "█"
+                return TextFormatter.safe_html(name[0]) + "█"
             else:  # SPOILER
                 first = TextFormatter.safe_html(name[0])
                 second = TextFormatter.safe_html(name[1])
-                return first + "<tg-spoiler>" + second + "</tg-spoiler>"
+                return f"{first}<tg-spoiler>{second}</tg-spoiler>"
         
-        # 3-5个字符 - 隐藏中间
-        if 3 <= name_len <= 5:
-            if method == MosaicMethod.CLASSIC:
-                middle = "█" * (name_len - 2)
-                return name[0] + middle + name[-1]
-            else:  # SPOILER
-                first = TextFormatter.safe_html(name[0])
-                middle = TextFormatter.safe_html(name[1:-1])
-                last = TextFormatter.safe_html(name[-1])
-                return first + "<tg-spoiler>" + middle + "</tg-spoiler>" + last
-        
-        # 6个以上 - 隐藏中间
+        # 3个字符及以上
         if method == MosaicMethod.CLASSIC:
-            return name[0] + "███" + name[-1]
+            first = TextFormatter.safe_html(name[0])
+            last = TextFormatter.safe_html(name[-1])
+            
+            # 3-5个字符按实际长度打码，6个以上固定 3 个方块
+            if name_len <= 5:
+                middle = "█" * (name_len - 2)
+                return f"{first}{middle}{last}"
+            else:
+                return f"{first}███{last}"
+                
         else:  # SPOILER
             first = TextFormatter.safe_html(name[0])
             middle = TextFormatter.safe_html(name[1:-1])
             last = TextFormatter.safe_html(name[-1])
-            return first + "<tg-spoiler>" + middle + "</tg-spoiler>" + last
+            return f"{first}<tg-spoiler>{middle}</tg-spoiler>{last}"
