@@ -10,7 +10,6 @@
     -100987654321
   ],
   "mosaic_new_member_name": false,
-  "mosaic_method": "SPOILER",
   "log_channel": 987654321,
   "main_site": "zh.wikipedia.org",
   "oauth_auth_url": "https://telegram-auth-bot.toolforge.org/auth?id={telegram_id}",
