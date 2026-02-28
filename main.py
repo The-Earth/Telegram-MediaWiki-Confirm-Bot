@@ -11,6 +11,8 @@ import requests
 
 from acrecord import AcRecord
 
+from text_formatter import TextFormatter, MosaicMethod
+
 
 class AcBot(catbot.Bot):
     def __init__(self, config_path='config.json'):
@@ -379,6 +381,13 @@ def new_member(msg: catbot.ChatMemberUpdate):
         lift_restriction_trial(ac_record, msg.chat.id, alert=True)
     else:
         with t_lock:
+            if bot.config.get('mosaic_new_member_name', False):
+                 method_str = bot.config.get('mosaic_method', 'SPOILER').upper()             
+                 mosaic_method = getattr(MosaicMethod, method_str, MosaicMethod.SPOILER)
+                 masked_name = TextFormatter.mosaic_name(msg.new_chat_member.name, mosaic_method)
+            else:
+                 masked_name = html_escape(msg.new_chat_member.name)
+
             cur = bot.send_message(
                 msg.chat.id,
                 text=bot.config['messages']['new_member_hint'].format(
