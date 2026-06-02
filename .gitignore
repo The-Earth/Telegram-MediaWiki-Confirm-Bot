@@ -132,3 +132,6 @@ dmypy.json
 .idea/
 .vscode/
 *.json
+
+# BitFun snapshot data - auto managed
+.bitfun/

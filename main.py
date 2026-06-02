@@ -29,7 +29,8 @@ class AcBot(catbot.Bot):
 
 bot = AcBot(config_path='config.json')
 t_lock = threading.Lock()
-site = mwclient.Site(bot.config['main_site'], connection_options={'proxies': bot.proxies})
+user_agent = 'Wikimedia-auth-telegram/0.1.0 (Operated by User:Tigerzeng)'
+site = mwclient.Site(bot.config['main_site'], connection_options={'proxies': bot.proxies}, clients_useragent=user_agent)
 
 
 def log(text):
