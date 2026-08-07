@@ -76,7 +76,9 @@ def lift_restriction_trial(ac_record: AcRecord, chat_id: int, alert=False):
             bot.send_message(chat_id, text=bot.config['messages']['insufficient_right'])
     except catbot.UserNotFoundError:
         pass
-    except catbot.APIError:
+    except catbot.ChatNotFoundError:
+        pass
+    except Exception:
         pass
 
 
