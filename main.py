@@ -267,7 +267,8 @@ def confirm_button(query: catbot.CallbackQuery):
 
     if ac_record.confirmed:
         bot.send_message(query.msg.chat.id, text=bot.config['messages']['confirm_complete'])
-        for chat_id in bot.config['groups']:
+        groups = bot.config['groups']
+        for chat_id in groups:
             try:
                 lift_restriction_trial(ac_record, chat_id, alert=True)
             except catbot.ChatNotFoundError:
@@ -322,8 +323,13 @@ def deconfirm_button(query: catbot.CallbackQuery):
     ))
     bot.send_message(query.msg.chat.id, text=bot.config['messages']['deconfirm_succ'])
 
-    for chat_id in bot.config['groups']:
-        silence_trial(ac_record, chat_id, alert=True)
+    groups = bot.config['groups']
+    for chat_id in groups:
+        try:
+            silence_trial(ac_record, chat_id, alert=True)
+        except catbot.ChatNotFoundError:
+            with t_lock:
+                bot.config['groups'].remove(chat_id)
 
 
 def new_member_cri(msg: catbot.ChatMemberUpdate) -> bool:
@@ -675,8 +681,13 @@ def refuse(msg: catbot.Message):
 
     log(bot.config['messages']['refuse_log'].format(tg_id=refused_id, refuser=html_escape(operator.name)))
 
-    for chat_id in bot.config['groups']:
-        silence_trial(ac_record, chat_id)
+    groups = bot.config['groups']
+    for chat_id in groups:
+        try:
+            silence_trial(ac_record, chat_id)
+        except catbot.ChatNotFoundError:
+            with t_lock:
+                bot.config['groups'].remove(chat_id)
 
 
 def accept_cri(msg: catbot.Message) -> bool:
