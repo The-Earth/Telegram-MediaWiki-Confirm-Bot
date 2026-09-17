@@ -59,10 +59,10 @@ def silence_trial(ac_record: AcRecord, chat_id: int, alert=False):
 
 
 def lift_restriction_trial(ac_record: AcRecord, chat_id: int, alert=False):
-    member = bot.get_chat_member(chat_id, ac_record.telegram_id)
-    if member.status == 'kicked':
-        return
     try:
+        member = bot.get_chat_member(chat_id, ac_record.telegram_id)
+        if member.status == 'kicked':
+            return
         bot.lift_restrictions(chat_id, ac_record.telegram_id)
         if alert:
             bot.send_message(chat_id, text=bot.config['messages']['lift_restriction_alert'].format(
@@ -77,7 +77,7 @@ def lift_restriction_trial(ac_record: AcRecord, chat_id: int, alert=False):
     except catbot.UserNotFoundError:
         pass
     except catbot.ChatNotFoundError:
-        pass
+        raise
     except Exception:
         pass
 
@@ -268,7 +268,11 @@ def confirm_button(query: catbot.CallbackQuery):
     if ac_record.confirmed:
         bot.send_message(query.msg.chat.id, text=bot.config['messages']['confirm_complete'])
         for chat_id in bot.config['groups']:
-            lift_restriction_trial(ac_record, chat_id, alert=True)
+            try:
+                lift_restriction_trial(ac_record, chat_id, alert=True)
+            except catbot.ChatNotFoundError:
+                with t_lock:
+                    bot.config['groups'].remove(chat_id)
         log(bot.config['messages']['confirm_log'].format(
             tg_id=ac_record.telegram_id,
             wp_name=get_mw_username(ac_record.mw_id),
@@ -381,7 +385,11 @@ def new_member(msg: catbot.ChatMemberUpdate):
             ac_record.restricted_until = restricted_until
 
     if ac_record.confirmed or ac_record.whitelist_reason[msg.chat.id]:
-        lift_restriction_trial(ac_record, msg.chat.id, alert=True)
+        try:
+            lift_restriction_trial(ac_record, msg.chat.id, alert=True)
+        except catbot.ChatNotFoundError:
+            with t_lock:
+                bot.config['groups'].remove(msg.chat.id)
     else:
         with t_lock:
             if bot.config.get('mosaic_new_member_name', False):
@@ -468,8 +476,11 @@ def add_whitelist(msg: catbot.Message):
         reply_to_message_id=msg.id,
         parse_mode='HTML'
     )
-
-    lift_restriction_trial(ac_record, msg.chat.id)
+    try:
+        lift_restriction_trial(ac_record, msg.chat.id)
+    except catbot.ChatNotFoundError:
+        with t_lock:
+            bot.config['groups'].remove(msg.chat.id)
 
 
 def remove_whitelist_cri(msg: catbot.Message) -> bool:
